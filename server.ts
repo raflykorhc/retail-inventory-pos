@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express from "express";
 import path from "path";
 import { Server } from "socket.io";
@@ -55,7 +56,7 @@ export async function createServer() {
 if (process.env.NODE_ENV !== "test") {
   createServer()
     .then((app) => {
-      const PORT = process.env.PORT ? parseInt(process.env.PORT) : (process.env.NODE_ENV === "production" ? 3000 : 3001);
+      const PORT = process.env.PORT ? parseInt(process.env.PORT) : (process.env.NODE_ENV === "production" ? 3002 : 3003);
       const httpServer = createHttpServer(app);
       const io = new Server(httpServer, {
         cors: { origin: "*" },

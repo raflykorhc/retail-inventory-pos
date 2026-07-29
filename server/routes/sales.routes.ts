@@ -8,8 +8,8 @@ const router = express.Router();
 router.use(authMiddleware);
 
 router.get("/", asyncHandler(SalesController.getAll));
+router.get("/summary", asyncHandler(SalesController.getSummary));
 router.post("/", asyncHandler(SalesController.create));
-router.post("/:id/fulfill", asyncHandler(SalesController.fulfillPendingItems));
-router.delete("/:id", asyncHandler(SalesController.softDelete));
+router.delete("/:id", asyncHandler(SalesController.delete));
 
 export default router;
