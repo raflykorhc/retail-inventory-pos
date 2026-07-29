@@ -6,9 +6,7 @@ import { useCartStore } from "../../store/useCartStore";
 export const HistoryModal: React.FC = () => {
   const {
     activeModal,
-    setActiveModal,
-    setSelectedSaleForDO,
-    setDoItems
+    setActiveModal
   } = useCartStore();
 
   const [history, setHistory] = useState<any[]>([]);
@@ -48,25 +46,6 @@ export const HistoryModal: React.FC = () => {
   }, [isOpen, viewMode]);
 
   if (!isOpen) return null;
-
-  const initiateCreateDO = (sale: any) => {
-    setSelectedSaleForDO(sale);
-    // Initialize doItems with pending quantities
-    const initialItems = sale.items.map((item: any) => ({
-      saleItemId: item.id,
-      productId: item.productId,
-      name: item.product?.name || "Produk",
-      totalQty: item.quantity,
-      deliveredQty: item.deliveredQuantity || 0,
-      pickedUpQty: item.pickedUpQuantity || 0,
-      inDeliveryQty: item.inDeliveryQuantity || 0,
-      pendingQty: item.remainingQuantity || 0,
-      takenQuantity: item.remainingQuantity || 0, // default to take all remaining
-      unitName: item.unit?.name || "Unit"
-    }));
-    setDoItems(initialItems);
-    setActiveModal("doModal");
-  };
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[80] flex items-end lg:items-center justify-center lg:p-4 animate-in fade-in duration-200">
@@ -148,27 +127,7 @@ export const HistoryModal: React.FC = () => {
                       </td>
                       <td className="px-4 py-3 text-center">
                         <div className="flex flex-col items-center space-y-1">
-                          {(() => {
-                            const hasPending = h.items?.some((i: any) => (i.pendingQuantity || 0) > 0);
-                            return (
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  initiateCreateDO(h);
-                                }}
-                                disabled={!hasPending}
-                                className={cn(
-                                  "px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all flex items-center mx-auto",
-                                  !hasPending 
-                                    ? "bg-status-success/10 text-status-success cursor-not-allowed"
-                                    : "bg-brand-light text-brand-primary hover:bg-brand-primary hover:text-text-inverse"
-                                )}
-                              >
-                                <Package className="w-3.5 h-3.5 mr-1.5" />
-                                {!hasPending ? "Tuntas" : "Ambil Titipan"}
-                              </button>
-                            );
-                          })()}
+                          {/* Removed DO Button */}
                         </div>
                       </td>
                     </tr>

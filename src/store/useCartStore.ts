@@ -13,7 +13,6 @@ interface CartItem {
   conversionFactor: number; // Default 1
   baseStock: number; // Total available stock in base units
   isBonus?: boolean;
-  takenQuantity?: number; // Quantity taken immediately (default to quantity)
 }
 
 export type ActiveModalType = 'history' | 'scanner' | 'printerSettings' | 'addCustomer' | 'success' | 'doModal' | null;
@@ -28,44 +27,21 @@ interface CartState {
   
   // Catalog & Search States
   searchQuery: string;
-  
-  // Customer & Project States
-  selectedCustomer: any;
-  customerSearchQuery: string;
-  isCustomerDropdownOpen: boolean;
-  selectedProject: any;
 
   // Checkout & Payment States
-  paymentMethod: "CASH" | "DEBT" | "TRANSFER" | "DEBIT" | "SPLIT";
-  dueDate: string;
+  paymentMethod: "CASH" | "TRANSFER" | "DEBIT";
   transactionDate: string;
   cashReceived: number;
-  isDeliveryRequired: boolean;
   
-  // Split Payment details
-  isSplitPayment: boolean;
-  splitAmounts: {
-    CASH: number;
-    DEBIT: number;
-    TRANSFER: number;
-    DEBT: number;
-  };
-
   // Modals & UI States
   activeModal: ActiveModalType;
   lastCreatedSale: any;
-
-  // Delivery Order (DO) States
-  selectedSaleForDO: any;
-  doItems: any[];
-  isCreatingDO: boolean;
 
   // Actions
   setSessionId: (id: string) => void;
   setCart: (items: CartItem[]) => void;
   addToCart: (product: any, batchId?: string) => void;
   updateQuantity: (id: string, delta: number, batchId?: string) => void;
-  setTakenQuantity: (id: string, qty: number, batchId?: string) => void;
   updateUnit: (id: string, unitId: string, unitName: string, price: number, conversionFactor: number, batchId?: string) => void;
   setManualQuantity: (id: string, qty: number, batchId?: string) => void;
   updateDiscount: (id: string, discount: number, batchId?: string) => void;
@@ -79,23 +55,11 @@ interface CartState {
 
   // POS Actions
   setSearchQuery: (query: string) => void;
-  setSelectedCustomer: (customer: any) => void;
-  setCustomerSearchQuery: (query: string) => void;
-  setIsCustomerDropdownOpen: (isOpen: boolean) => void;
-  setSelectedProject: (project: any) => void;
-  setPaymentMethod: (method: "CASH" | "DEBT" | "TRANSFER" | "DEBIT" | "SPLIT") => void;
-  setDueDate: (date: string) => void;
+  setPaymentMethod: (method: "CASH" | "TRANSFER" | "DEBIT") => void;
   setTransactionDate: (date: string) => void;
   setCashReceived: (val: number) => void;
-  setIsDeliveryRequired: (val: boolean) => void;
-  setIsSplitPayment: (isSplit: boolean) => void;
-  setSplitAmount: (method: "CASH" | "DEBIT" | "TRANSFER" | "DEBT", amount: number) => void;
-  setSplitAmounts: (amounts: { CASH: number; DEBIT: number; TRANSFER: number; DEBT: number }) => void;
   setActiveModal: (modal: ActiveModalType) => void;
   setLastCreatedSale: (sale: any) => void;
-  setSelectedSaleForDO: (sale: any) => void;
-  setDoItems: (items: any[]) => void;
-  setIsCreatingDO: (isCreating: boolean) => void;
 }
 
 export const useCartStore = create<CartState>((set) => ({
@@ -106,27 +70,11 @@ export const useCartStore = create<CartState>((set) => ({
   isCartOpen: false,
   checkoutStep: 'cart',
   searchQuery: '',
-  selectedCustomer: null,
-  customerSearchQuery: '',
-  isCustomerDropdownOpen: false,
-  selectedProject: null,
   paymentMethod: 'CASH',
-  dueDate: '',
   transactionDate: '',
   cashReceived: 0,
-  isDeliveryRequired: false,
-  isSplitPayment: false,
-  splitAmounts: {
-    CASH: 0,
-    DEBIT: 0,
-    TRANSFER: 0,
-    DEBT: 0,
-  },
   activeModal: null,
   lastCreatedSale: null,
-  selectedSaleForDO: null,
-  doItems: [],
-  isCreatingDO: false,
 
   // Setters & Actions
   setSessionId: (id) => set({ sessionId: id }),
@@ -135,28 +83,11 @@ export const useCartStore = create<CartState>((set) => ({
   setIsCartOpen: (isOpen) => set({ isCartOpen: isOpen }),
   setCheckoutStep: (step) => set({ checkoutStep: step }),
   setSearchQuery: (query) => set({ searchQuery: query }),
-  setSelectedCustomer: (customer) => set({ selectedCustomer: customer }),
-  setCustomerSearchQuery: (query) => set({ customerSearchQuery: query }),
-  setIsCustomerDropdownOpen: (isOpen) => set({ isCustomerDropdownOpen: isOpen }),
-  setSelectedProject: (project) => set({ selectedProject: project }),
   setPaymentMethod: (method) => set({ paymentMethod: method }),
-  setDueDate: (date) => set({ dueDate: date }),
   setTransactionDate: (date) => set({ transactionDate: date }),
   setCashReceived: (val) => set({ cashReceived: val }),
-  setIsDeliveryRequired: (val) => set({ isDeliveryRequired: val }),
-  setIsSplitPayment: (isSplit) => set({ isSplitPayment: isSplit }),
-  setSplitAmount: (method, amount) => set((state) => ({
-    splitAmounts: {
-      ...state.splitAmounts,
-      [method]: amount
-    }
-  })),
-  setSplitAmounts: (amounts) => set({ splitAmounts: amounts }),
   setActiveModal: (modal) => set({ activeModal: modal }),
   setLastCreatedSale: (sale) => set({ lastCreatedSale: sale }),
-  setSelectedSaleForDO: (sale) => set({ selectedSaleForDO: sale }),
-  setDoItems: (items) => set({ doItems: items }),
-  setIsCreatingDO: (isCreating) => set({ isCreatingDO: isCreating }),
 
   addToCart: (product, batchId) => set((state) => {
     const existing = state.cart.find(item => item.id === product.id && (item.batchId ?? null) === (batchId ?? null));
@@ -220,29 +151,12 @@ export const useCartStore = create<CartState>((set) => ({
         const newTotalInBase = newQty * item.conversionFactor;
         if (newTotalInBase > item.baseStock || newQty < 1) return item;
         
-        // Clamp takenQuantity if it's set
-        const updatedItem = { ...item, quantity: newQty };
-        if (updatedItem.takenQuantity !== undefined) {
-          updatedItem.takenQuantity = Math.min(updatedItem.takenQuantity, newQty);
-        }
-        
-        return updatedItem;
+        return { ...item, quantity: newQty };
       }
       return item;
     });
     return { cart: newCart };
   }),
-  setTakenQuantity: (id, qty, batchId) =>
-    set((state) => {
-      const newCart = state.cart.map(item => {
-        if (item.id === id && (item.batchId ?? null) === (batchId ?? null)) {
-          const clampedQty = Math.max(0, Math.min(qty, item.quantity));
-          return { ...item, takenQuantity: clampedQty };
-        }
-        return item;
-      });
-      return { ...state, cart: newCart };
-    }),
   updateUnit: (id, unitId, unitName, price, conversionFactor, batchId) => set((state) => ({
     cart: state.cart.map(item => {
       if (item.id === id && (item.batchId ?? null) === (batchId ?? null)) {
@@ -260,10 +174,6 @@ export const useCartStore = create<CartState>((set) => ({
           quantity: newQty > 0 ? newQty : 1 // Keep at least 1 if possible
         };
 
-        if (updatedItem.takenQuantity !== undefined) {
-          updatedItem.takenQuantity = Math.min(updatedItem.takenQuantity, updatedItem.quantity);
-        }
-        
         return updatedItem;
       }
       return item;
@@ -276,9 +186,6 @@ export const useCartStore = create<CartState>((set) => ({
         const maxQty = Math.floor(item.baseStock / item.conversionFactor);
         const newQty = Math.max(0, Math.min(safeQty, maxQty));
         const updatedItem = { ...item, quantity: newQty };
-        if (updatedItem.takenQuantity !== undefined) {
-          updatedItem.takenQuantity = Math.min(updatedItem.takenQuantity, newQty);
-        }
         return updatedItem;
       }
       return item;
@@ -319,14 +226,8 @@ export const useCartStore = create<CartState>((set) => ({
     cart: [], 
     globalDiscount: 0, 
     checkoutStep: 'cart',
-    selectedCustomer: null,
-    selectedProject: null,
-    isSplitPayment: false,
-    splitAmounts: { CASH: 0, DEBIT: 0, TRANSFER: 0, DEBT: 0 },
-    dueDate: '',
     transactionDate: '',
     cashReceived: 0,
-    isDeliveryRequired: false,
     paymentMethod: 'CASH'
   }),
 }));

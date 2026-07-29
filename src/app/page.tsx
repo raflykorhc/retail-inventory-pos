@@ -21,14 +21,10 @@ import axiosClient from "../lib/axiosClient";
 
 import { useCartStore } from "../store/useCartStore";
 import { useProductBatches } from "../hooks/queries/useProducts";
-import { useCustomers } from "../hooks/queries/useCustomers";
-
-// Import modular subcomponents
 import { ProductCatalog } from "../components/pos/ProductCatalog";
 import { CartPanel } from "../components/pos/CartPanel";
 import { PaymentPanel } from "../components/pos/PaymentPanel";
 import { HistoryModal } from "../components/pos/HistoryModal";
-import { DOModal } from "../components/pos/DOModal";
 
 export default function POSPage() {
   // Zustand Store
@@ -40,10 +36,7 @@ export default function POSPage() {
     clearCart,
     checkoutStep,
     setCheckoutStep,
-    selectedCustomer,
-    setSelectedCustomer,
     setPaymentMethod,
-    setDueDate,
     setCashReceived,
     isCartOpen,
     setIsCartOpen,
@@ -52,23 +45,10 @@ export default function POSPage() {
     lastCreatedSale
   } = useCartStore();
 
-  // Queries
-  const { data: customersData } = useCustomers();
-  
   const socketRef = useRef<Socket | null>(null);
   const isSyncingRef = useRef(false);
   const isReceivingSocketRef = useRef(false);
   const [lastScannedItemName, setLastScannedItemName] = useState<string | null>(null);
-
-  // New Customer Form State
-  const [newCustomer, setNewCustomer] = useState({
-    name: "",
-    phone: "",
-    address: "",
-    isContractor: false,
-    creditLimit: "",
-    billingDate: ""
-  });
 
   // Batch Picker State
   const [batchPickerProduct, setBatchPickerProduct] = useState<any>(null);
@@ -204,8 +184,7 @@ export default function POSPage() {
           batchId: item.batchId,
           conversionFactor: selectedPrice?.conversionFactor || 1,
           baseStock: Number(baseStock),
-          isBonus: item.isBonus || false,
-          takenQuantity: item.takenQuantity !== null ? item.takenQuantity : undefined
+          isBonus: item.isBonus || false
         };
       });
     };
@@ -271,8 +250,7 @@ export default function POSPage() {
             price: item.price,
             discount: item.discount || 0,
             quantity: item.quantity,
-            isBonus: item.isBonus || false,
-            takenQuantity: item.takenQuantity
+            isBonus: item.isBonus || false
           }))
         })
       });
@@ -293,16 +271,6 @@ export default function POSPage() {
       syncCartToServer(cart);
     }, 500);
   }, [cart]);
-
-  // Auto-select 'Umum' customer only when data is first loaded
-  useEffect(() => {
-    if (customersData && customersData.length > 0 && !selectedCustomer) {
-      const umum = customersData.find((c: any) => c.name.toLowerCase() === "umum");
-      if (umum) {
-        setSelectedCustomer(umum);
-      }
-    }
-  }, [customersData, selectedCustomer, setSelectedCustomer]);
 
   // Keyboard Shortcuts (Alt-based and browser-safe combinations)
   useEffect(() => {
@@ -376,33 +344,8 @@ export default function POSPage() {
     };
   }, [checkoutStep, activeModal, cart, clearCart, setActiveModal, setCheckoutStep]);
 
-  // Add Customer Form Submit
-  const handleAddCustomer = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCustomer.name) return;
-    
-    try {
-      const response = await fetch("/api/customers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newCustomer)
-      });
-      
-      if (response.ok) {
-        const customer = await response.json();
-        setSelectedCustomer(customer);
-        setActiveModal(null);
-        setNewCustomer({ name: "", phone: "", address: "", isContractor: false, creditLimit: "", billingDate: "" });
-        toast.success("Pelanggan Berhasil Ditambahkan", { description: customer.name });
-      }
-    } catch (error) {
-      console.error("Failed to add customer:", error);
-      toast.error("Gagal menambahkan pelanggan");
-    }
-  };
-
   return (
-    <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative bg-bg-main text-text-primary transition-colors duration-300 h-full">
+    <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative bg-bg-main text-text-primary transition-colors duration-300 h-[100dvh]">
       
       {/* Product Catalog list */}
       <ProductCatalog onSelectBatchProduct={(product) => setBatchPickerProduct(product)} />
@@ -412,106 +355,6 @@ export default function POSPage() {
 
       {/* Modal Riwayat Transaksi */}
       <HistoryModal />
-
-      {/* Modal Buat DO Parsial */}
-      <DOModal />
-
-      {/* Modal Tambah Pelanggan Baru */}
-      {activeModal === "addCustomer" && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[80] flex items-end lg:items-center justify-center lg:p-4 animate-in fade-in duration-200">
-          <div className="bg-bg-modal w-full rounded-t-3xl lg:rounded-[2.5rem] overflow-hidden animate-in slide-in-from-bottom-full lg:slide-in-from-bottom-0 lg:zoom-in lg:fade-in duration-300 ease-out flex flex-col max-h-[90vh] lg:max-w-md">
-            {/* Drag Handle for Mobile */}
-            <div className="lg:hidden w-full flex justify-center pt-3 pb-1 bg-brand-primary">
-              <div className="w-12 h-1.5 bg-white/30 rounded-full animate-pulse"></div>
-            </div>
-            <div className="p-4 lg:p-6 border-b flex items-center justify-between bg-brand-primary border-border-subtle flex-shrink-0">
-              <h3 className="text-base lg:text-lg font-black text-text-inverse">Tambah Pelanggan Baru</h3>
-              <button onClick={() => setActiveModal(null)} className="text-text-inverse/60 hover:text-text-inverse p-2 -mr-2 lg:mr-0 min-w-[44px] min-h-[44px] flex items-center justify-center">
-                <X className="w-5 h-5 lg:w-6 h-6" />
-              </button>
-            </div>
-            <div className="overflow-y-auto custom-scrollbar flex-1">
-              <form onSubmit={handleAddCustomer} className="p-4 lg:p-6 space-y-8">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Nama Lengkap</label>
-                  <input 
-                    type="text" 
-                    required
-                    className="w-full p-3 border text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary transition-colors bg-bg-main border-border-default text-text-primary placeholder:text-text-muted rounded-lg h-[44px]"
-                    placeholder="Contoh: Bpk. Ahmad"
-                    value={newCustomer.name}
-                    onChange={(e) => setNewCustomer(prev => ({ ...prev, name: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Nomor Telepon</label>
-                  <input 
-                    type="tel" 
-                    className="w-full p-3 border text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary transition-colors bg-bg-main border-border-default text-text-primary placeholder:text-text-muted rounded-lg"
-                    placeholder="0812..."
-                    value={newCustomer.phone}
-                    onChange={(e) => setNewCustomer(prev => ({ ...prev, phone: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Alamat</label>
-                  <textarea 
-                    className="w-full p-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary h-20 resize-none transition-colors bg-bg-main border-border-default text-text-primary placeholder:text-text-muted"
-                    placeholder="Alamat lengkap..."
-                    value={newCustomer.address}
-                    onChange={(e) => setNewCustomer(prev => ({ ...prev, address: e.target.value }))}
-                  />
-                </div>
-                <div className="flex items-center space-x-3 p-3 rounded-[24px] border transition-colors bg-bg-main border-border-default">
-                  <input 
-                    type="checkbox" 
-                    id="isContractor"
-                    className="w-4 h-4 text-brand-primary rounded focus:ring-brand-primary rounded-lg"
-                    checked={newCustomer.isContractor}
-                    onChange={(e) => setNewCustomer(prev => ({ ...prev, isContractor: e.target.checked }))}
-                  />
-                  <label htmlFor="isContractor" className="text-xs font-bold cursor-pointer transition-colors text-text-secondary">Daftarkan sebagai Kontraktor</label>
-                </div>
-                {newCustomer.isContractor && (
-                  <div className="space-y-8 animate-in fade-in slide-in-from-top-2">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Limit Piutang (Rp)</label>
-                      <input 
-                        type="number" 
-                        className="w-full p-3 border text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary transition-colors bg-bg-main border-border-default text-text-primary placeholder:text-text-muted rounded-lg h-[44px]"
-                        placeholder="10000000"
-                        value={newCustomer.creditLimit}
-                        onChange={(e) => setNewCustomer(prev => ({ ...prev, creditLimit: e.target.value }))}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Tanggal Jatuh Tempo Default (1-31)</label>
-                      <input 
-                        type="number" 
-                        min="1"
-                        max="31"
-                        className="w-full p-3 border text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary transition-colors bg-bg-main border-border-default text-text-primary placeholder:text-text-muted rounded-lg h-[44px]"
-                        placeholder="Contoh: 25 (Untuk tanggal 25 setiap bulan)"
-                        value={newCustomer.billingDate || ""}
-                        onChange={(e) => setNewCustomer(prev => ({ ...prev, billingDate: e.target.value }))}
-                      />
-                      <p className="text-[9px] text-text-muted font-medium italic">Kosongkan jika tidak ada tanggal jatuh tempo tetap.</p>
-                    </div>
-                  </div>
-                )}
-                <div className="p-4 lg:p-6 border-t border-border-subtle bg-bg-main/50 flex-shrink-0">
-                  <button 
-                    type="submit"
-                    className="w-full min-h-[44px] bg-brand-primary text-text-inverse font-bold shadow-lg shadow-brand-primary/20 hover:bg-brand-hover transition-all rounded-full px-7 py-[14px] text-[14px] font-bold active:scale-95 transition-transform"
-                  >
-                    Simpan Pelanggan
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Batch Picker Modal */}
       {batchPickerProduct && (

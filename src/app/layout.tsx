@@ -357,60 +357,8 @@ export default function Layout({ children }: LayoutProps) {
               to="/inventory"
               collapsed={isSidebarCollapsed}
             />
-            <Can role={["ADMIN", "MANAGER", "CASHIER"]}>
-              <SidebarItem 
-                icon={<Truck className="w-5 h-5" />} 
-                label="Pengiriman" 
-                to="/delivery" 
-                collapsed={isSidebarCollapsed}
-              />
-            </Can>
-            <Can role={["ADMIN", "MANAGER", "CASHIER"]}>
-              <SidebarItem 
-                icon={<RotateCcw className="w-5 h-5" />} 
-                label="Retur Barang" 
-                to="/returns" 
-                collapsed={isSidebarCollapsed}
-              />
-            </Can>
           </Can>
 
-          <Can role={["ADMIN", "MANAGER", "CASHIER"]}>
-            {!isSidebarCollapsed ? (
-              <div className="text-[10px] font-bold text-text-muted uppercase tracking-wider px-4 mb-2 mt-6 whitespace-nowrap">Relasi & Proyek</div>
-            ) : <div className="h-4 mt-6"></div>}
-            <SidebarItem 
-              icon={<Users className="w-5 h-5" />} 
-              label="Pelanggan" 
-              to="/customers"
-              collapsed={isSidebarCollapsed}
-            />
-            <SidebarItem 
-              icon={<Briefcase className="w-5 h-5" />} 
-              label="Manajemen Proyek" 
-              to="/projects"
-              collapsed={isSidebarCollapsed}
-            />
-          </Can>
-
-          <Can role={["ADMIN", "MANAGER", "CASHIER"]}>
-            {!isSidebarCollapsed ? (
-              <div className="text-[10px] font-bold text-text-muted uppercase tracking-wider px-4 mb-2 mt-6 whitespace-nowrap">Keuangan</div>
-            ) : <div className="h-4 mt-6"></div>}
-            <SidebarItem 
-              icon={<Receipt className="w-5 h-5" />} 
-              label="Piutang & Hutang" 
-              to="/debts"
-              collapsed={isSidebarCollapsed}
-            />
-            <SidebarItem 
-              icon={<Receipt className="w-5 h-5" />} 
-              label="Pengeluaran" 
-              to="/expenses"
-              collapsed={isSidebarCollapsed}
-            />
-          </Can>
-          
           <Can role={["ADMIN", "MANAGER", "CASHIER"]}>
             {!isSidebarCollapsed ? (
               <div className="text-[10px] font-bold text-text-muted uppercase tracking-wider px-4 mb-2 mt-6 whitespace-nowrap">
