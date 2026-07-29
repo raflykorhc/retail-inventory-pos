@@ -1,0 +1,42 @@
+node_modules
+dist
+.git
+.gitignore
+backups
+scratch
+tests
+coverage
+*.log
+.env
+.env.local
+.env.*.local
+Dockerfile.dev
+docker-compose.dev.yml
+README.md
+BAB_I.md
+INSTRUCTIONS.md
+check_db.ts
+seed.ts
+prisma/dev.db
+.understand-anything
+
+# Local dev configs & database explorer
+.devdbrc
+*.dbml
+*.dbml.layout.json
+metadata.json
+
+# Local scripts & helper tools
+scripts/cleanup-unused.ts
+scripts/setup-demo.ts
+server/debug_product.ts
+server/scratch
+
+# Uploads & local runtime configurations
+uploads
+server/config/shop-settings.json
+server/config/optimization-status.json
+public/signature.png
+
+# Windows batch files
+*.bat

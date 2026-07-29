@@ -1,0 +1,364 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Optimistic VF", "Montserrat", "Helvetica", "Arial", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  /* Meta Design System Colors */
+  --color-primary: var(--color-primary);
+  --color-primary-deep: var(--color-primary-deep);
+  --color-primary-soft: var(--color-primary-soft);
+  --color-on-primary: var(--color-on-primary);
+  
+  --color-ink-button: var(--color-ink-button);
+  --color-on-ink-button: var(--color-on-ink-button);
+  
+  --color-canvas: var(--color-canvas);
+  --color-surface-soft: var(--color-surface-soft);
+  
+  --color-ink-deep: var(--color-ink-deep);
+  --color-ink: var(--color-ink);
+  --color-charcoal: var(--color-charcoal);
+  --color-slate: var(--color-slate);
+  --color-steel: var(--color-steel);
+  --color-stone: var(--color-stone);
+  
+  --color-hairline: var(--color-hairline);
+  --color-hairline-soft: var(--color-hairline-soft);
+  
+  --color-success: var(--color-success);
+  --color-attention: var(--color-attention);
+  --color-warning: var(--color-warning);
+  --color-critical: var(--color-critical);
+  --color-critical-strong: var(--color-critical-strong);
+
+  /* Semantic Aliases for existing app variables */
+  --color-bg-main: var(--color-canvas);
+  --color-bg-card: var(--color-surface-soft);
+  --color-bg-sidebar: var(--color-surface-soft);
+  --color-bg-header: var(--color-surface-soft);
+  --color-bg-modal: var(--color-surface-soft);
+  
+  --color-text-primary: var(--color-ink-deep);
+  --color-text-secondary: var(--color-charcoal);
+  --color-text-muted: var(--color-slate);
+  --color-text-inverse: var(--color-canvas);
+  
+  --color-border-subtle: var(--color-hairline-soft);
+  --color-border-default: var(--color-hairline);
+  --color-border-strong: var(--color-charcoal);
+  
+  --color-brand-primary: var(--color-primary);
+  --color-brand-hover: var(--color-primary-deep);
+  --color-brand-light: var(--color-primary-soft);
+  
+  --color-status-success: var(--color-success);
+  --color-status-warning: var(--color-warning);
+  --color-status-danger: var(--color-critical);
+
+  /* Meta Border Radius */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 16px;
+  --radius-xxl: 24px;
+  --radius-xxxl: 32px;
+  --radius-feature: 40px;
+  --radius-full: 100px;
+  --radius-circle: 9999px;
+}
+
+:root {
+  /* Base Colors (Light Mode) */
+  --color-primary: #0064e0;
+  --color-primary-deep: #0457cb;
+  --color-primary-soft: rgba(0, 100, 224, 0.15);
+  --color-on-primary: #ffffff;
+  
+  --color-ink-button: #000000;
+  --color-on-ink-button: #ffffff;
+  
+  --color-canvas: #f0f2f5;
+  --color-surface-soft: #ffffff;
+  
+  --color-ink-deep: #0a1317;
+  --color-ink: #1c1e21;
+  --color-charcoal: #444950;
+  --color-slate: #4b4c4f;
+  --color-steel: #5d6c7b;
+  --color-stone: #8595a4;
+  
+  --color-hairline: #ced0d4;
+  --color-hairline-soft: #dee3e9;
+  
+  --color-success: #31a24c;
+  --color-attention: #f2a918;
+  --color-warning: #f7b928;
+  --color-critical: #e41e3f;
+  --color-critical-strong: #f0284a;
+}
+
+.dark {
+  /* Base Colors (Dark Mode) - Mapped logically since Meta is mainly light mode */
+  --color-primary: #0064e0;
+  --color-primary-deep: #0091ff;
+  --color-primary-soft: rgba(0, 100, 224, 0.25);
+  --color-on-primary: #ffffff;
+  
+  --color-ink-button: #ffffff;
+  --color-on-ink-button: #000000;
+  
+  --color-canvas: #18191a;
+  --color-surface-soft: #242526;
+  
+  --color-ink-deep: #ffffff;
+  --color-ink: #f1f4f7;
+  --color-charcoal: #ced0d4;
+  --color-slate: #8595a4;
+  --color-steel: #5d6c7b;
+  --color-stone: #4b4c4f;
+  
+  --color-hairline: #444950;
+  --color-hairline-soft: #1c1e21;
+  
+  --color-success: #31a24c;
+  --color-attention: #f2a918;
+  --color-warning: #f7b928;
+  --color-critical: #e41e3f;
+  --color-critical-strong: #f0284a;
+  
+  color-scheme: dark;
+}
+
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+
+  /*
+   * Synchronized theme transition:
+   * Semua elemen yang menggunakan CSS variable warna akan bertransisi
+   * secara bersamaan saat tema diubah — tidak ada yang tertinggal.
+   */
+  *,
+  *::before,
+  *::after {
+    transition:
+      background-color 300ms ease,
+      color 300ms ease,
+      border-color 300ms ease,
+      fill 300ms ease,
+      stroke 300ms ease,
+      box-shadow 300ms ease,
+      opacity 300ms ease;
+  }
+
+  /*
+   * Saat tema sedang diganti, blokir semua transisi selama 1 frame
+   * agar semua elemen "start" dari titik yang sama sebelum transisi dimulai.
+   * Class ini ditambahkan dan dihapus secara atomik oleh ThemeContext.
+   */
+  .no-theme-transition *,
+  .no-theme-transition *::before,
+  .no-theme-transition *::after {
+    transition: none !important;
+  }
+
+  /*
+   * Elemen yang butuh transisi LEBIH CEPAT (interaksi hover, focus, active)
+   * override rule di atas agar tetap responsif.
+   */
+  button,
+  a,
+  input,
+  select,
+  textarea,
+  [role="button"] {
+    transition:
+      background-color 150ms ease,
+      color 150ms ease,
+      border-color 150ms ease,
+      box-shadow 150ms ease,
+      opacity 150ms ease,
+      transform 150ms ease;
+  }
+
+  body {
+    @apply bg-bg-main text-text-primary antialiased;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background-clip: content-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+    background-clip: content-box;
+  }
+}
+
+/*
+ * Framer Motion elements handle their own animation \u2014 override global transition
+ * agar tidak tabrakan dengan animasi transform/opacity dari Framer Motion.
+ */
+[data-framer-motion],
+[style*="--framer"] {
+  transition: background-color 300ms ease, color 300ms ease, border-color 300ms ease !important;
+}
+
+/*
+ * Elemen yang tidak butuh transisi warna sama sekali
+ * (misalnya gambar, video, canvas)
+ */
+img,
+video,
+canvas,
+svg image {
+  transition: none !important;
+}
+
+@layer utilities {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 10px;
+    transition: background 0.2s;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .mobile-bottom-space {
+    @apply pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0;
+  }
+}
+
+/* HTML5 QR Code Scanner Overrides */
+#reader {
+  border: none !important;
+  background-color: #000 !important;
+}
+
+#reader__dashboard_section_csr button {
+  @apply !bg-brand-primary !text-white !px-4 !py-2 !rounded-lg !font-bold !text-sm hover:!bg-brand-hover !transition-colors !cursor-pointer !border-none;
+}
+
+#reader__dashboard_section_csr select {
+  @apply !bg-bg-card !text-text-primary !px-3 !py-2 !rounded-lg !border !border-border-default !text-sm !mr-2;
+}
+
+#reader__camera_selection {
+  @apply !bg-bg-card !text-text-primary !px-3 !py-2 !rounded-lg !border !border-border-default !text-sm;
+}
+
+#reader__status_span {
+  @apply !text-text-muted !text-xs !font-medium;
+}
+
+#reader img {
+  display: none !important;
+}
+
+#reader__scan_region {
+  @apply !flex !items-center !justify-center !bg-black;
+}
+
+#reader__scan_region video {
+  @apply !rounded-xl;
+  object-fit: cover !important;
+}
+
+#reader__dashboard_section_swaplink {
+  @apply !text-brand-primary !text-xs !font-medium hover:!underline !mt-2 !inline-block;
+}
+
+/* Hide default browser date picker icon and make entire input clickable for picker */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  background: transparent;
+  bottom: 0;
+  color: transparent;
+  cursor: pointer;
+  height: auto;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: auto;
+  opacity: 0;
+}
+
+input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+#html5-qrcode-button-camera-stop {
+  display: none !important;
+}
+
+@keyframes skeleton-pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.animate-skeleton {
+  animation: skeleton-pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Custom styling to make phantom-ui skeleton loaders soft and premium */
+phantom-ui {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0%;
+  min-height: 0;
+  --shimmer-bg: rgba(15, 74, 138, 0.05); /* Soft slate blue in light mode */
+  --shimmer-color: rgba(15, 74, 138, 0.12); /* Soft brand blue highlight */
+  --shimmer-duration: 1.6s;
+  --reveal-duration: 0.3s;
+}
+
+.dark phantom-ui {
+  --shimmer-bg: rgba(255, 255, 255, 0.04); /* Subtle gray in dark mode */
+  --shimmer-color: rgba(255, 255, 255, 0.09); /* Subtle highlight sweep */
+}
+
+/* Disable transitions on elements inside loading phantom-ui to prevent text color flicker (kedap-kedip ke hitam) */
+phantom-ui[loading] *,
+phantom-ui[loading] *::before,
+phantom-ui[loading] *::after {
+  transition: none !important;
+}
