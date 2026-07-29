@@ -37,21 +37,17 @@ model Product {
   deletedAt   DateTime?
   supplierId  String?
 
-  // --- ABC Classification & Min-Max Dynamic Stock Fields ---
-  abcCategory  String? // Klasifikasi ABC: 'A', 'B', atau 'C' (null = belum diklasifikasi)
-  leadTime     Int     @default(3) // Estimasi waktu tunggu supplier dalam hari (input manual pemilik)
-  maxStock     Float? // Batas maksimum stok yang diinginkan
-  suggestedMin Float? // Rekomendasi Min dari kalkulasi Peak Demand (cache)
-  suggestedMax Float? // Rekomendasi Max dari kalkulasi Peak Demand (cache)
-  // ---------------------------------------------------------
+  abcCategory  String? 
+  leadTime     Int     @default(3) 
+  maxStock     Float? 
+  suggestedMin Float? 
+  suggestedMax Float? 
 
   cartItems     CartItem[]
-  deliveryItems DeliveryItem[]
   category      Category       @relation(fields: [categoryId], references: [id])
   supplier      Supplier?      @relation(fields: [supplierId], references: [id])
   prices        ProductPrice[]
   purchaseItems PurchaseItem[]
-  returnItems   ReturnItem[]
   saleItems     SaleItem[]
   stockBatches  StockBatch[]
   stockLogs     StockLog[]
@@ -88,47 +84,9 @@ model StockLog {
   @@index([createdAt])
 }
 
-model Customer {
-  id           String     @id @default(cuid())
-  name         String
-  phone        String?
-  email        String?
-  address      String?
-  isContractor Boolean    @default(false)
-  creditLimit  Decimal?
-  billingDate  Int?
-  tier         String     @default("REGULAR")
-  notes        String?
-  deletedAt    DateTime?
-  debts        Debt[]
-  deliveries   Delivery[]
-  projects     Project[]
-  returns      Return[]
-  sales        Sale[]
-
-  @@index([name])
-  @@index([deletedAt])
-}
-
-model Project {
-  id              String   @id @default(cuid())
-  customerId      String
-  projectName     String
-  location        String?
-  status          String   @default("ACTIVE")
-  budget          Decimal  @default(0)
-  specialDiscount Float    @default(0)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  customer        Customer @relation(fields: [customerId], references: [id])
-  sales           Sale[]
-}
-
 model Sale {
   id                 String     @id @default(cuid())
   invoiceNumber      String     @unique
-  customerId         String?
-  projectId          String?
   totalAmount        Decimal
   paymentStatus      String
   paymentMethod      String     @default("CASH")
@@ -137,17 +95,9 @@ model Sale {
   createdAt          DateTime   @default(now())
   deletedAt          DateTime?
   userId             String?
-  isDeliveryRequired Boolean    @default(false)
-  debts              Debt[]
-  deliveries         Delivery[]
-  returns            Return[]
-  customer           Customer?  @relation(fields: [customerId], references: [id])
-  project            Project?   @relation(fields: [projectId], references: [id])
   user               User?      @relation(fields: [userId], references: [id])
   items              SaleItem[]
 
-  @@index([customerId])
-  @@index([projectId])
   @@index([userId])
   @@index([createdAt])
   @@index([invoiceNumber])
@@ -162,8 +112,6 @@ model SaleItem {
   productId         String
   unitId            String
   quantity          Float
-  deliveredQuantity Float           @default(0)
-  pendingQuantity   Float           @default(0)
   priceAtSale       Decimal
   isManualPrice     Boolean         @default(false)
   isBonus           Boolean         @default(false)
@@ -171,115 +119,6 @@ model SaleItem {
   sale              Sale            @relation(fields: [saleId], references: [id], onDelete: Cascade)
   unit              Unit            @relation(fields: [unitId], references: [id])
   batchAllocations  SaleItemBatch[]
-}
-
-model Debt {
-  id               String        @id @default(cuid())
-  saleId           String?
-  customerId       String?
-  amountDue        Decimal
-  remainingBalance Decimal
-  dueDate          DateTime
-  status           String        @default("UNPAID")
-  lastReminderSent DateTime?
-  reference        String?
-  notes            String?
-  createdAt        DateTime      @default(now())
-  deletedAt        DateTime?
-  customer         Customer?     @relation(fields: [customerId], references: [id])
-  sale             Sale?         @relation(fields: [saleId], references: [id], onDelete: Cascade)
-  payments         DebtPayment[]
-
-  @@index([customerId])
-  @@index([saleId])
-  @@index([status])
-}
-
-model DebtPayment {
-  id          String   @id @default(cuid())
-  debtId      String
-  amountPaid  Decimal
-  discount    Decimal? @default(0)
-  paymentDate DateTime @default(now())
-  method      String
-  attachment  String?
-  debt        Debt     @relation(fields: [debtId], references: [id], onDelete: Cascade)
-
-  @@index([debtId])
-  @@index([paymentDate])
-}
-
-model Expense {
-  id          String          @id @default(cuid())
-  categoryId  String
-  categoryRef ExpenseCategory @relation(fields: [categoryId], references: [id])
-  amount      Decimal
-  description String?
-  receiptPath String?
-  date        DateTime        @default(now())
-
-  @@index([categoryId])
-  @@index([date])
-}
-
-model ExpenseCategory {
-  id        String    @id @default(cuid())
-  name      String    @unique
-  deletedAt DateTime?
-  expenses  Expense[]
-}
-
-model Delivery {
-  id           String         @id @default(cuid())
-  doNumber     String         @unique
-  saleId       String?
-  customerId   String?
-  address      String?
-  driverName   String?
-  vehiclePlate String?
-  status       String         @default("PENDING")
-  signature    String?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  customer     Customer?      @relation(fields: [customerId], references: [id])
-  sale         Sale?          @relation(fields: [saleId], references: [id])
-  items        DeliveryItem[]
-}
-
-model DeliveryItem {
-  id         String   @id @default(cuid())
-  deliveryId String
-  productId  String
-  quantity   Float
-  unitName   String
-  isChecked  Boolean  @default(false)
-  delivery   Delivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
-  product    Product  @relation(fields: [productId], references: [id])
-}
-
-model Return {
-  id           String       @id @default(cuid())
-  returnNumber String       @unique
-  saleId       String?
-  customerId   String?
-  reason       String?
-  resolution   String       @default("REFUND")
-  totalAmount  Decimal      @default(0)
-  createdAt    DateTime     @default(now())
-  customer     Customer?    @relation(fields: [customerId], references: [id])
-  sale         Sale?        @relation(fields: [saleId], references: [id])
-  items        ReturnItem[]
-}
-
-model ReturnItem {
-  id        String  @id @default(cuid())
-  returnId  String
-  productId String
-  quantity  Float
-  price     Decimal
-  condition String  @default("GOOD")
-  product   Product @relation(fields: [productId], references: [id])
-  return    Return  @relation(fields: [returnId], references: [id], onDelete: Cascade)
 }
 
 model Cart {
@@ -294,11 +133,10 @@ model CartItem {
   cartId        String
   productId     String
   unitId        String?
-  batchId       String? // Untuk mendukung FIFO batch selection yang tetap persisten saat sync
-  price         Decimal? // Untuk menyimpan harga saat ditambahkan ke cart agar tidak berubah-ubah atau hilang
-  discount      Decimal? @default(0) // Menyimpan diskon per item
+  batchId       String? 
+  price         Decimal? 
+  discount      Decimal? @default(0) 
   quantity      Float
-  takenQuantity Float? // Menyimpan jumlah barang yang diambil sekarang (untuk split DO/titip)
   isBonus       Boolean  @default(false)
   cart          Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
   product       Product  @relation(fields: [productId], references: [id])
@@ -343,7 +181,6 @@ model Supplier {
   email     String?
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
-  payables  Payable[]
   products  Product[]
   purchases Purchase[]
 
@@ -359,7 +196,6 @@ model Purchase {
   paymentMethod String         @default("TRANSFER")
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
-  payables      Payable[]
   supplier      Supplier       @relation(fields: [supplierId], references: [id])
   items         PurchaseItem[]
 
@@ -379,41 +215,6 @@ model PurchaseItem {
   purchase   Purchase    @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
   unit       Unit        @relation(fields: [unitId], references: [id])
   stockBatch StockBatch?
-}
-
-model Payable {
-  id               String           @id @default(cuid())
-  purchaseId       String?
-  supplierId       String
-  amountDue        Decimal
-  remainingBalance Decimal
-  dueDate          DateTime
-  status           String           @default("UNPAID")
-  reference        String?
-  notes            String?
-  createdAt        DateTime         @default(now())
-  deletedAt        DateTime?
-  purchase         Purchase?        @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
-  supplier         Supplier         @relation(fields: [supplierId], references: [id])
-  payments         PayablePayment[]
-
-  @@index([supplierId])
-  @@index([purchaseId])
-  @@index([status])
-}
-
-model PayablePayment {
-  id          String   @id @default(cuid())
-  payableId   String
-  amountPaid  Decimal
-  discount    Decimal? @default(0)
-  paymentDate DateTime @default(now())
-  method      String
-  attachment  String?
-  payable     Payable  @relation(fields: [payableId], references: [id], onDelete: Cascade)
-
-  @@index([paymentDate])
-  @@index([payableId])
 }
 
 model StockBatch {
@@ -470,6 +271,6 @@ model ProductImage {
   id        String   @id @default(cuid())
   productId String   @unique
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  data      Bytes    // raw binary image data
-  mimeType  String   // e.g. "image/jpeg"
+  data      Bytes
+  mimeType  String
 }

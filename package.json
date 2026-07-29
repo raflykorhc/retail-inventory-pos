@@ -1,5 +1,5 @@
 {
-  "name": "react-example",
+  "name": "retail-inventory-pos",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -12,7 +12,7 @@
     "test": "NODE_ENV=test jest",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "tunnel": "cloudflared tunnel --url http://localhost:3000",
+    "tunnel": "cloudflared tunnel --url http://localhost:3002",
     "tunnel:named": "cloudflared tunnel --no-autoupdate run --token $TUNNEL_TOKEN"
   },
   "dependencies": {

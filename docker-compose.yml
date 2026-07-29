@@ -1,51 +1,51 @@
 services:
   db:
     image: postgres:15-alpine
-    container_name: pd-pos-db
+    container_name: retail-pos-db
     restart: always
     environment:
       POSTGRES_USER: user_pos
       POSTGRES_PASSWORD: password_pos
-      POSTGRES_DB: db_sukses_bangunan
+      POSTGRES_DB: db_retail_pos
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user_pos -d db_sukses_bangunan"]
+      test: ["CMD-SHELL", "pg_isready -U user_pos -d db_retail_pos"]
       interval: 5s
       timeout: 5s
       retries: 10
 
   app:
     build: .
-    container_name: pd-pos-app
+    container_name: retail-pos-app
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "3002:3000"
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - DATABASE_URL=postgresql://user_pos:password_pos@db:5432/db_sukses_bangunan?schema=public
+      - DATABASE_URL=postgresql://user_pos:password_pos@db:5432/db_retail_pos?schema=public
       - JWT_SECRET=super_secret_pos_key_12345
     depends_on:
       db:
         condition: service_healthy
 
-  tunnel:
-    image: cloudflare/cloudflared:latest
-    container_name: pd-pos-tunnel-prod
-    restart: unless-stopped
-    network_mode: service:app
-    command: tunnel run --token ${TUNNEL_TOKEN} --protocol http2
-    env_file:
-      - .env
-    depends_on:
-      - app
+#  tunnel:
+#    image: cloudflare/cloudflared:latest
+#    container_name: retail-pos-tunnel-prod
+#    restart: unless-stopped
+#    network_mode: service:app
+#    command: tunnel run --token  --protocol http2
+#    env_file:
+#      - .env
+#    depends_on:
+#      - app
 
 volumes:
   postgres_data:
 
 networks:
   default:
-    name: pos-network
+    name: retail-pos-network
