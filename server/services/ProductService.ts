@@ -708,9 +708,7 @@ export class ProductService {
           include: {
             saleItem: {
               include: {
-                sale: {
-                  include: { customer: true }
-                },
+                sale: true,
                 unit: true
               }
             }

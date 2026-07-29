@@ -79,7 +79,6 @@ export const getPurchaseSummary = async (req: Request, res: Response) => {
       _sum: { totalAmount: true }
     });
 
-    // Get supplier names for the breakdown
     const supplierIds = suppliers.map(s => s.supplierId).filter(id => id !== null) as string[];
     const supplierNames = await prisma.supplier.findMany({
       where: { id: { in: supplierIds } },
@@ -123,7 +122,6 @@ export const createPurchase = async (req: Request, res: Response) => {
         }
       }
 
-      // 1. Create Purchase
       const purchase = await tx.purchase.create({
         data: {
           invoiceNumber,
@@ -135,9 +133,6 @@ export const createPurchase = async (req: Request, res: Response) => {
         }
       });
 
-      // 2. Pre-update all Product Prices in Master Data
-      // This ensures if a purchase has multiple units of the same product, 
-      // all snapshots will have the latest prices from this purchase.
       for (const item of items) {
         if (item.sellingPrice !== undefined && item.sellingPrice !== null) {
           const productPrice = await tx.productPrice.findFirst({
@@ -152,16 +147,13 @@ export const createPurchase = async (req: Request, res: Response) => {
         }
       }
 
-      // 3. Process items, update stock, and create batches
       for (const item of items) {
-        // Find product
         const product = await tx.product.findUnique({ 
           where: { id: item.productId },
           include: { prices: true }
         });
         if (!product) throw new Error(`Product ${item.productId} not found`);
 
-        // Find conversion factor for the selected unit
         const pPrice = product.prices.find(p => p.unitId === item.unitId);
         const conversionFactor = pPrice?.conversionFactor || 1;
         const baseQuantity = Number(item.quantity) * conversionFactor;
@@ -176,7 +168,6 @@ export const createPurchase = async (req: Request, res: Response) => {
            newAverageCost = (oldTotalValue + newAddedValue) / newStock;
         }
 
-        // 1. Create Purchase Item
         const purchaseItem = await tx.purchaseItem.create({
           data: {
             purchaseId: purchase.id,
@@ -187,7 +178,6 @@ export const createPurchase = async (req: Request, res: Response) => {
           }
         });
 
-        // 2. Create Stock Batch - Store in BASE UNITS
         const batch = await tx.stockBatch.create({
           data: {
             productId: item.productId,
@@ -202,7 +192,6 @@ export const createPurchase = async (req: Request, res: Response) => {
           }
         });
 
-        // 3. SNAPSHOT ALL PRICES for this Batch
         const currentPrices = await tx.productPrice.findMany({
           where: { productId: item.productId }
         });
@@ -217,7 +206,6 @@ export const createPurchase = async (req: Request, res: Response) => {
           });
         }
 
-        // 5. Update Product Stock and Cost
         await tx.product.update({
           where: { id: item.productId },
           data: {
@@ -227,7 +215,6 @@ export const createPurchase = async (req: Request, res: Response) => {
           }
         });
 
-        // 6. Create StockLog
         await tx.stockLog.create({
           data: {
             productId: item.productId,
@@ -239,40 +226,6 @@ export const createPurchase = async (req: Request, res: Response) => {
         });
       }
 
-      // 4. Handle Payable if not fully paid
-      if (paymentStatus === "UNPAID" || paymentStatus === "PARTIAL") {
-        const remainingBalance = Number(totalAmount) - (Number(amountPaid) || 0);
-        
-        let finalDueDate = dueDate ? new Date(dueDate) : null;
-        if (!finalDueDate) {
-          finalDueDate = new Date();
-          finalDueDate.setDate(finalDueDate.getDate() + 30);
-        }
-
-        const payable = await tx.payable.create({
-          data: {
-            purchaseId: purchase.id,
-            supplierId,
-            amountDue: totalAmount,
-            remainingBalance,
-            dueDate: finalDueDate,
-            status: paymentStatus
-          }
-        });
-
-        // Record initial payment if partial
-        if (paymentStatus === "PARTIAL" && amountPaid > 0) {
-          await tx.payablePayment.create({
-            data: {
-              payableId: payable.id,
-              amountPaid,
-              method: paymentMethod
-            }
-          });
-        }
-      }
-
-      // Fetch the full purchase data to return to client
       return tx.purchase.findUnique({
         where: { id: purchase.id },
         include: {
