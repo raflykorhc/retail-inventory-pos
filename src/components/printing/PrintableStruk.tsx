@@ -1,11 +1,13 @@
 import React from 'react';
 import { formatCurrency } from '../../lib/utils';
+import { useSettingsStore } from '../../store/useSettingsStore';
 
 interface PrintableStrukProps {
   data: any;
 }
 
 export const PrintableStruk = React.forwardRef<HTMLDivElement, PrintableStrukProps>(({ data }, ref) => {
+  const { settings } = useSettingsStore();
   if (!data) return null;
 
   return (
@@ -22,10 +24,10 @@ export const PrintableStruk = React.forwardRef<HTMLDivElement, PrintableStrukPro
       `}</style>
 
       <div className="text-center mb-4 struk-text">
-        <h1 className="text-[12pt] font-black uppercase">PD SUKSES BANGUNAN</h1>
-        <p className="text-[9pt]">Jl. Citalang, Kec. Purwakarta</p>
-        <p className="text-[9pt]">Depan Grha Citalang - Purwakarta</p>
-        {/* <p className="text-[9pt]">WA: 0899-3124-264</p> */}
+        <h1 className="text-[12pt] font-black uppercase">{settings.shopName}</h1>
+        <p className="text-[9pt]">{settings.shopAddress.split(',')[0]}</p>
+        <p className="text-[9pt]">{settings.shopAddress.split(',').slice(1).join(', ')}</p>
+        <p className="text-[9pt]">WA: {settings.shopPhone}</p>
       </div>
 
       <div className="border-y border-dashed border-black py-2 mb-3 struk-text text-[9pt]">
@@ -37,7 +39,7 @@ export const PrintableStruk = React.forwardRef<HTMLDivElement, PrintableStrukPro
           <span>KSR: {data.user?.fullName?.split(' ')[0] || 'ADMIN'}</span>
           <span>{new Date(data.createdAt || Date.now()).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
-        <p className="truncate">PLG: {data.customer?.name || 'PELANGGAN UMUM'}</p>
+
       </div>
 
       <div className="space-y-2 mb-4 struk-text text-[10pt]">

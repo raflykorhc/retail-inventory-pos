@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { useSettingsStore } from "../store/useSettingsStore";
 import { useReactToPrint } from "react-to-print";
 import { QRCodeSVG } from "qrcode.react";
 import { 
@@ -40,6 +41,7 @@ interface QRPrintManagerProps {
 
 // Komponen Template Cetak menggunakan React dan Tailwind
 const PrintTemplate = React.forwardRef<HTMLDivElement, { queue: PrintItem[], layout: "STICKER" | "SHELF" | "A4" }>(({ queue, layout }, ref) => {
+  const settings = useSettingsStore.getState().settings;
   return (
     <div ref={ref} className="bg-white print:p-0">
        <style type="text/css" media="print">
@@ -80,7 +82,7 @@ const PrintTemplate = React.forwardRef<HTMLDivElement, { queue: PrintItem[], lay
                 <div key={`${item.id}-${i}`} className="w-[100mm] h-[60mm] border-[2px] border-black rounded-[2mm] flex flex-col box-border bg-white overflow-hidden relative mb-[5mm] print:mb-0" style={{ pageBreakAfter: 'always' }}>
                   <div className="bg-black text-white px-[4mm] py-[1.5mm] text-[7.5pt] font-[900] uppercase tracking-[0.5px] flex justify-between items-center shrink-0" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
                     <span>{item.category || 'UMUM'}</span>
-                    <span>TOKO SUKSES BANGUNAN</span>
+                    <span>{settings.shopName}</span>
                   </div>
                   <div className="flex flex-1 overflow-hidden">
                     <div className="flex flex-1 flex-col justify-between p-[4mm] pr-[3mm] overflow-hidden">
@@ -365,6 +367,7 @@ function PrintQueueItem({
 }
 
 export function QRPrintManager({ isOpen, onClose, initialItems = [] }: QRPrintManagerProps) {
+  const settings = useSettingsStore.getState().settings;
   const [printQueue, setPrintQueue] = useState<PrintItem[]>([]);
   const [layout, setLayout] = useState<"STICKER" | "SHELF" | "A4">("STICKER");
   const [globalCopies, setGlobalCopies] = useState<number>(1);
@@ -445,7 +448,7 @@ export function QRPrintManager({ isOpen, onClose, initialItems = [] }: QRPrintMa
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
-    documentTitle: 'Cetak Label - PD Sukses Bangunan',
+    documentTitle: `Cetak Label - ${settings.shopName}`,
   });
 
   if (!isOpen) return null;

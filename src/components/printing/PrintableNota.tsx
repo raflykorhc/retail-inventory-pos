@@ -1,5 +1,6 @@
 import React from 'react';
 import { formatCurrency } from '../../lib/utils';
+import { useSettingsStore } from '../../store/useSettingsStore';
 
 interface PrintableNotaProps {
   data: any;
@@ -26,6 +27,7 @@ export const PrintableNota = React.forwardRef<HTMLDivElement, PrintableNotaProps
   const totalQuantity = data.items?.reduce((sum: number, item: any) => sum + item.quantity, 0) || 0;
   const calculatedSubTotal = data.items?.reduce((sum: number, item: any) => sum + (Number(item.priceAtSale || item.price) * item.quantity), 0) || 0;
   const actualTotal = Number(data.totalAmount);
+  const { settings } = useSettingsStore();
   
   // Calculate discount
   let totalDiscount = calculatedSubTotal - actualTotal;
@@ -76,11 +78,11 @@ export const PrintableNota = React.forwardRef<HTMLDivElement, PrintableNotaProps
           {/* Left: Company Info */}
           <div className="w-[35%] text-black font-medium">
             <h1 className="text-sm lg:text-base font-bold uppercase tracking-wide mb-1">FAKTUR PENJUALAN</h1>
-            <div className="font-bold">PD SUKSES BANGUNAN</div>
-            <div>Jl. Citalang, Kec. Purwakarta, depan Perumahan Grha Citalang</div>
-            <div>Tlp: 08993124264</div>
-            <div>pdsuksesbngunan@gmail.com</div>
-            <div>BCA 2310576690 A/N: Umar Sajjaad</div>
+            <div className="font-bold">{settings.shopName}</div>
+            <div>{settings.shopAddress}</div>
+            <div>Tlp: {settings.shopPhone}</div>
+            <div>{settings.shopEmail}</div>
+            <div>{settings.bankAccountInfo}</div>
           </div>
 
           {/* Middle: Invoice Info */}
@@ -88,12 +90,6 @@ export const PrintableNota = React.forwardRef<HTMLDivElement, PrintableNotaProps
             <div className="grid grid-cols-[80px_10px_1fr] gap-y-0.5">
               <span>No Transaksi</span><span>:</span><span className="text-black">{data.invoiceNumber}</span>
               <span>Tanggal</span><span>:</span><span className="text-black">{new Date(data.createdAt || Date.now()).toLocaleString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(/\./g, ':')}</span>
-              <span>Pelanggan</span><span>:</span><span className="text-black">{data.customer?.name || 'Umum'}</span>
-              <span>Alamat</span><span>:</span>
-              <span className="text-black flex gap-2">
-                <span className="truncate">{data.customer?.address || '-'}</span>
-                {data.customer?.phone && <span> Tlp: {data.customer.phone}</span>}
-              </span>
             </div>
           </div>
 
@@ -158,7 +154,7 @@ export const PrintableNota = React.forwardRef<HTMLDivElement, PrintableNotaProps
               <div className="flex mt-4 gap-12 text-center">
                 <div className="w-24">
                   <div>Hormat Kami</div>
-                  <div className="mt-8 text-black border-b border-dashed border-black">( {data.user?.fullName?.split(' ')[0] || 'Umar'} )</div>
+                  <div className="mt-8 text-black border-b border-dashed border-black">( {settings.defaultSignee} )</div>
                 </div>
                 <div className="w-24">
                   <div>Penerima</div>

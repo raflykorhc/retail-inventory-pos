@@ -11,6 +11,7 @@ export interface ShopSettings {
   shopPhone: string;
   shopLogo: string;
   defaultSignee: string;
+  bankAccountInfo: string;
 }
 
 const DEFAULT_SETTINGS: ShopSettings = {
@@ -19,7 +20,8 @@ const DEFAULT_SETTINGS: ShopSettings = {
   shopEmail: "pdsuksesbngunan@gmail.com",
   shopPhone: "081234567890",
   shopLogo: "/logo.png",
-  defaultSignee: "Umar Sajjaad"
+  defaultSignee: "Umar Sajjaad",
+  bankAccountInfo: "BCA 2310576690 A/N: Umar Sajjaad"
 };
 
 export class SettingsService {

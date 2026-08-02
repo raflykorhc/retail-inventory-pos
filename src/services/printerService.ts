@@ -1,4 +1,5 @@
 import EscPosEncoder from 'esc-pos-encoder';
+import { useSettingsStore } from '../store/useSettingsStore';
 
 export type PrinterConnectionType = 'USB' | 'BLUETOOTH' | 'WIFI';
 
@@ -159,6 +160,7 @@ export class PrinterService {
 
   private static generateSalesReceipt(data: any): Uint8Array {
     const encoder = new EscPosEncoder();
+    const settings = useSettingsStore.getState().settings;
     
     const formatCurrency = (val: number) => `Rp ${val.toLocaleString('id-ID')}`;
     
@@ -168,16 +170,16 @@ export class PrinterService {
       .align('center')
       .bold(true)
       .size('normal')
-      .text('PD SUKSES BANGUNAN\n')
+      .text(`${settings.shopName}\n`)
       .bold(false)
       .size('small')
-      .text('Cab. Purwakarta\n')
+      .text(`${settings.shopAddress.split(',')[0]}\n`)
       .size('normal')
       .text('--------------------------------\n')
       .align('left')
       .text(`Tgl : ${new Date().toLocaleString('id-ID')}\n`);
       
-    if (data.customer) builder = builder.text(`Plg : ${data.customer}\n`);
+
     builder = builder.text('--------------------------------\n');
 
     // Items

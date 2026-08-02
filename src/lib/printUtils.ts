@@ -1,6 +1,8 @@
 import { formatCurrency } from "./utils";
+import { useSettingsStore } from "../store/useSettingsStore";
 
 export const handlePrintInvoice = (sale: any) => {
+  const settings = useSettingsStore.getState().settings;
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
     alert("Tolong izinkan pop-up untuk mencetak struk.");
@@ -86,14 +88,6 @@ export const handlePrintInvoice = (sale: any) => {
 
         .meta-label { color: #6b7280; }
         .meta-value { font-weight: 700; }
-        
-        .customer-name {
-          margin-top: 12px;
-          font-size: 13px;
-          font-weight: 700;
-          text-align: right;
-        }
-
         /* Table Styling */
         table {
           width: 100%;
@@ -208,24 +202,23 @@ export const handlePrintInvoice = (sale: any) => {
         <div class="header">
           <div class="brand-section">
             <div class="logo-container">
-              <img src="/logo.png" style="width: 50px; height: auto;" alt="Logo PD Sukses Bangunan" />
-              <h1 class="business-name">PD SUKSES<br>BANGUNAN</h1>
+              <img src="${settings.shopLogo || '/logo.png'}" style="width: 50px; height: auto;" alt="Logo ${settings.shopName}" />
+              <h1 class="business-name">${settings.shopName.replace(' ', '<br>')}</h1>
             </div>
             <div class="business-info">
-              Jl. Citalang, Kec. Purwakarta, depan Perumahan Grha Citalang<br>
-              pdsuksesbngunan@gmail.com
+              ${settings.shopAddress}<br>
+              ${settings.shopEmail}
             </div>
           </div>
 
           <div class="invoice-title-section">
-            <div class="invoice-label">INVOICE</div>
+            <div class="invoice-label">NOTA PENJUALAN</div>
             <div class="invoice-meta">
               <span class="meta-label">Tanggal</span>
               <span class="meta-value">: ${new Date(sale.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
               <span class="meta-label">No. Transaksi</span>
               <span class="meta-value">: ${sale.invoiceNumber}</span>
             </div>
-            <div class="customer-name">Kepada ${sale.customer?.name || 'Umum'}</div>
           </div>
         </div>
 
@@ -275,15 +268,13 @@ export const handlePrintInvoice = (sale: any) => {
             <div>
               <div class="footer-section-title">Metode Pembayaran</div>
               <div class="payment-details">
-                BCA<br>
-                No. Rek 2310576690<br>
-                A/N Umar Sajjaad
+                ${settings.bankAccountInfo.replace(/\n/g, '<br>')}
               </div>
             </div>
             <div>
               <div class="footer-section-title">Konfirmasi Pembayaran</div>
               <div class="confirmation-details">
-                +62 899-3124-264 (umar)
+                ${settings.shopPhone}
               </div>
             </div>
             <div class="terms">
@@ -296,7 +287,7 @@ export const handlePrintInvoice = (sale: any) => {
               <div class="signature-space">
                 <img src="/signature.png" style="width: 120px; height: auto;" alt="Tanda Tangan Umar" />
               </div>
-              <div class="signature-name">Umar Sajjaad</div>
+              <div class="signature-name">${settings.defaultSignee}</div>
             </div>
         </div>
       </div>
