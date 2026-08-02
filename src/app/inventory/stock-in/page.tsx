@@ -42,8 +42,6 @@ export default function StockInPage() {
   const [supplierId, setSupplierId] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("TRANSFER");
-  const [paymentStatus, setPaymentStatus] = useState("PAID");
-  const [amountPaid, setAmountPaid] = useState<number>(0);
   const [items, setItems] = useState<any[]>([]);
   const [successData, setSuccessData] = useState<any>(null);
   const [isQRManagerOpen, setIsQRManagerOpen] = useState(false);
@@ -51,11 +49,7 @@ export default function StockInPage() {
   const [transactionDate, setTransactionDate] = useState(() => {
     return new Date().toISOString().split('T')[0];
   });
-  const [dueDate, setDueDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 30);
-    return d.toISOString().split('T')[0];
-  });
+
   
   // Search State
   const [searchQuery, setSearchQuery] = useState("");
@@ -233,30 +227,15 @@ export default function StockInPage() {
       if (item.costPrice < 0) return toast.error("Validasi Gagal", { description: `Harga beli barang ${item.name} tidak valid` });
     }
 
-    let finalPaymentStatus = paymentStatus;
-    if (paymentMethod === "DEBT") {
-      if (amountPaid > 0 && amountPaid < totalAmount) {
-        finalPaymentStatus = "PARTIAL";
-      } else if (amountPaid >= totalAmount) {
-        finalPaymentStatus = "PAID";
-      } else {
-        finalPaymentStatus = "UNPAID";
-      }
-    } else {
-      finalPaymentStatus = "PAID";
-    }
-
      setIsSubmitting(true);
     const promise = axiosClient.post("/purchases", {
       supplierId,
       invoiceNumber,
       paymentMethod,
-      paymentStatus: finalPaymentStatus,
-      amountPaid: paymentMethod === "DEBT" ? amountPaid : totalAmount,
+      paymentStatus: "PAID",
       totalAmount,
       items,
-      transactionDate,
-      dueDate: paymentMethod === "DEBT" ? dueDate : undefined
+      transactionDate
     });
 
     toast.promise(promise, {
@@ -347,60 +326,8 @@ export default function StockInPage() {
               >
                 <option value="TRANSFER">Transfer Bank</option>
                 <option value="CASH">Tunai (Cash)</option>
-                <option value="DEBT">Tempo (Hutang)</option>
               </select>
             </div>
-
-            {paymentMethod === "DEBT" && (
-              <div className="space-y-8 p-4 bg-brand-primary/5 rounded-[32px] border border-brand-primary/20">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-brand-primary tracking-widest ml-1">Bayar Dimuka (DP)</label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-primary font-bold text-xs">Rp</span>
-                    <input 
-                      type="number" value={amountPaid} onChange={(e) => setAmountPaid(Number(e.target.value))}
-                      className="w-full pl-11 pr-4 py-3 bg-bg-main border border-brand-primary/30 rounded-xl text-sm text-text-primary focus:ring-2 focus:ring-brand-primary outline-none transition-all"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-brand-primary tracking-widest ml-1">Tanggal Jatuh Tempo *</label>
-                  <input 
-                    type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)}
-                    className="w-full px-4 py-3 bg-bg-main border border-brand-primary/30 rounded-xl text-sm text-text-primary focus:ring-2 focus:ring-brand-primary outline-none transition-all relative"
-                  />
-                  <div className="grid grid-cols-3 gap-2 mt-1">
-                    {[
-                      { label: "1 Bulan", days: 30 },
-                      { label: "3 Bulan", days: 90 },
-                      { label: "1 Tahun", days: 365 }
-                    ].map(opt => {
-                      const optDate = new Date();
-                      optDate.setDate(optDate.getDate() + opt.days);
-                      const dateStr = optDate.toISOString().split('T')[0];
-                      const isActive = dueDate === dateStr;
-                      return (
-                        <button
-                          key={opt.days}
-                          type="button"
-                          onClick={() => setDueDate(dateStr)}
-                          className={cn(
-                            "py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border",
-                            isActive 
-                              ? "bg-brand-primary text-text-inverse border-brand-primary shadow-sm" 
-                              : "bg-bg-main text-text-secondary border-border-default hover:bg-border-subtle"
-                          )}
-                        >
-                          {opt.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-                <p className="text-[10px] text-text-muted mt-2">Sisa tagihan akan masuk ke Hutang Supplier.</p>
-              </div>
-            )}
           </div>
           
           <div className="hidden lg:block bg-bg-card border border-border-default rounded-[32px] p-8 sticky bottom-0">

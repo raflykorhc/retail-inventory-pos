@@ -124,8 +124,6 @@ export default function InventoryPage() {
   });
   const [sortBy, setSortBy] = useState<"name" | "stock" | "price">("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-  const [paymentMethod, setPaymentMethod] = useState<"CASH" | "DEBT">("CASH");
-  const [dueDate, setDueDate] = useState<string>("");
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
