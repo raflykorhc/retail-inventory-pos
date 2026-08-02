@@ -23,7 +23,7 @@ export const useCheckout = () => {
       queryClient.invalidateQueries({ queryKey: ['sales'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['product-batches'] });
-      queryClient.invalidateQueries({ queryKey: ['customers'] });
+
       toast.success("Transaksi Berhasil", {
         description: "Data penjualan telah tersimpan dalam sistem.",
       });

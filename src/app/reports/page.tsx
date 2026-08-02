@@ -43,6 +43,7 @@ import { SearchableSelect } from "../../components/ui/SearchableSelect";
 import { motion, AnimatePresence } from "motion/react";
 import { Can } from "../../components/auth/Can";
 import { useAuthStore } from "../../store/useAuthStore";
+import { useSettingsStore } from "../../store/useSettingsStore";
 import {
   LineChart,
   Line,
@@ -69,7 +70,8 @@ const COLORS = ['#0F4A8A', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 export default function ReportsPage() {
   const { theme } = useTheme();
   const { user } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<"SALES" | "EXPENSES" | "PURCHASES" | "STOCK" | "PROFIT_LOSS">("SALES");
+  const settings = useSettingsStore(state => state.settings);
+  const [activeTab, setActiveTab] = useState<"SALES" | "PURCHASES" | "STOCK" | "PROFIT_LOSS">("SALES");
   const [period, setPeriod] = useState<Period>("monthly");
   
   const today = new Date();
@@ -84,15 +86,10 @@ export default function ReportsPage() {
   const [fullExportData, setFullExportData] = useState<any[] | null>(null);
 
   const placeholderSales = useMemo(() => [
-    { id: "s1", invoiceNumber: "INV-20260616-001", createdAt: "2026-06-16T09:00:00.000Z", customer: { name: "Budi Santoso" }, paymentMethod: "CASH", totalAmount: 1500000, paymentStatus: "LUNAS" },
-    { id: "s2", invoiceNumber: "INV-20260616-002", createdAt: "2026-06-16T09:15:00.000Z", customer: { name: "Siti Rahma" }, paymentMethod: "TRANSFER", totalAmount: 3450000, paymentStatus: "LUNAS" },
-    { id: "s3", invoiceNumber: "INV-20260616-003", createdAt: "2026-06-16T10:00:00.000Z", customer: null, paymentMethod: "CASH", totalAmount: 120000, paymentStatus: "LUNAS" },
-    { id: "s4", invoiceNumber: "INV-20260616-004", createdAt: "2026-06-16T10:30:00.000Z", customer: { name: "Ahmad Fauzi" }, paymentMethod: "DEBT", totalAmount: 4800000, paymentStatus: "PIUTANG" }
-  ], []);
-
-  const placeholderExpenses = useMemo(() => [
-    { id: "e1", createdAt: "2026-06-16T10:00:00.000Z", category: "Operasional Toko", description: "Pembelian ATK & Token Listrik", amount: 250000 },
-    { id: "e2", createdAt: "2026-06-16T12:00:00.000Z", category: "Gaji Karyawan", description: "Gaji Staff Toko Periode Juni", amount: 5000000 }
+    { id: "s1", invoiceNumber: "INV-20260616-001", createdAt: "2026-06-16T09:00:00.000Z", paymentMethod: "CASH", totalAmount: 1500000, paymentStatus: "LUNAS" },
+    { id: "s2", invoiceNumber: "INV-20260616-002", createdAt: "2026-06-16T09:15:00.000Z", paymentMethod: "TRANSFER", totalAmount: 3450000, paymentStatus: "LUNAS" },
+    { id: "s3", invoiceNumber: "INV-20260616-003", createdAt: "2026-06-16T10:00:00.000Z", paymentMethod: "CASH", totalAmount: 120000, paymentStatus: "LUNAS" },
+    { id: "s4", invoiceNumber: "INV-20260616-004", createdAt: "2026-06-16T10:30:00.000Z", paymentMethod: "CASH", totalAmount: 4800000, paymentStatus: "LUNAS" }
   ], []);
 
   const placeholderStockMovements = useMemo(() => [
@@ -131,16 +128,6 @@ export default function ReportsPage() {
     totalBonusValue: 150000
   }), []);
 
-  const placeholderAnalyticsExpenses = useMemo(() => ({
-    totalExpense: 8500000,
-    totalTransactions: 15,
-    categoryData: [
-      { name: "Gaji Karyawan", value: 5000000 },
-      { name: "Operasional Toko", value: 2000000 },
-      { name: "Bensin & Transport", value: 1000000 }
-    ]
-  }), []);
-
   const placeholderAnalyticsPurchases = useMemo(() => ({
     totalPurchase: 36000000,
     totalTransactions: 8,
@@ -165,21 +152,9 @@ export default function ReportsPage() {
 
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
-  const [selectedPaymentStatus, setSelectedPaymentStatus] = useState("");
   const [selectedStockType, setSelectedStockType] = useState(""); // IN, OUT, ADJUSTMENT
+  const [searchQuery, setSearchQuery] = useState("");
   
-  const [customerIdFilter, setCustomerIdFilter] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const cid = urlParams.get('customerId');
-      if (cid) {
-        setCustomerIdFilter(cid);
-      }
-    }
-  }, []);
-
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(15);
@@ -187,11 +162,10 @@ export default function ReportsPage() {
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [dateRange, selectedCategory, selectedPaymentMethod, selectedPaymentStatus, selectedStockType, activeTab, customerIdFilter]);
+  }, [dateRange, selectedCategory, selectedPaymentMethod, selectedStockType, activeTab, searchQuery]);
 
   // Modal
   const [selectedSale, setSelectedSale] = useState<any | null>(null);
-  const [selectedExpense, setSelectedExpense] = useState<any | null>(null);
   const [selectedPurchase, setSelectedPurchase] = useState<any | null>(null);
   const [selectedStockMovement, setSelectedStockMovement] = useState<any | null>(null);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
@@ -218,26 +192,24 @@ export default function ReportsPage() {
 
   // Table Data Query
   const tableQuery = useQuery({
-    queryKey: ['reports', 'table', activeTab, dateRange, selectedCategory, selectedPaymentMethod, selectedPaymentStatus, selectedStockType, customerIdFilter, currentPage, itemsPerPage],
+    queryKey: ['reports', 'table', activeTab, dateRange, selectedCategory, selectedPaymentMethod, selectedStockType, searchQuery, currentPage, itemsPerPage],
     queryFn: async () => {
       const paginationParams = `&page=${currentPage}&limit=${itemsPerPage}`;
       if (activeTab === "SALES") {
         let baseUrl = `/api/reports/sales?startDate=${dateRange.start}&endDate=${dateRange.end}T23:59:59`;
         if (selectedCategory) baseUrl += `&categoryId=${selectedCategory}`;
         if (selectedPaymentMethod) baseUrl += `&paymentMethod=${selectedPaymentMethod}`;
-        if (selectedPaymentStatus) baseUrl += `&paymentStatus=${selectedPaymentStatus}`;
-        if (customerIdFilter) baseUrl += `&customerId=${customerIdFilter}`;
-        return (await fetch(baseUrl + paginationParams)).json();
-      } else if (activeTab === "EXPENSES") {
-        let baseUrl = `/api/expenses?startDate=${dateRange.start}&endDate=${dateRange.end}T23:59:59`;
+        if (searchQuery) baseUrl += `&search=${encodeURIComponent(searchQuery)}`;
         return (await fetch(baseUrl + paginationParams)).json();
       } else if (activeTab === "PURCHASES") {
         let baseUrl = `/api/purchases?startDate=${dateRange.start}&endDate=${dateRange.end}T23:59:59`;
+        if (searchQuery) baseUrl += `&search=${encodeURIComponent(searchQuery)}`;
         return (await fetch(baseUrl + paginationParams)).json();
       } else if (activeTab === "STOCK") {
         let baseUrl = `/api/reports/stock/movements?startDate=${dateRange.start}&endDate=${dateRange.end}T23:59:59`;
         if (selectedCategory) baseUrl += `&categoryId=${selectedCategory}`;
         if (selectedStockType) baseUrl += `&type=${selectedStockType}`;
+        if (searchQuery) baseUrl += `&search=${encodeURIComponent(searchQuery)}`;
         return (await fetch(baseUrl + paginationParams)).json();
       } 
       return { items: [], total: 0 };
@@ -249,23 +221,23 @@ export default function ReportsPage() {
 
   // Analytics / Summary Query
   const summaryQuery = useQuery({
-    queryKey: ['reports', 'summary', activeTab, dateRange, selectedCategory, selectedPaymentMethod, selectedPaymentStatus, selectedStockType, customerIdFilter],
+    queryKey: ['reports', 'summary', activeTab, dateRange, selectedCategory, selectedPaymentMethod, selectedStockType, searchQuery],
     queryFn: async () => {
       if (activeTab === "SALES") {
         let url = `/api/reports/sales/summary?startDate=${dateRange.start}&endDate=${dateRange.end}T23:59:59`;
         if (selectedCategory) url += `&categoryId=${selectedCategory}`;
         if (selectedPaymentMethod) url += `&paymentMethod=${selectedPaymentMethod}`;
-        if (selectedPaymentStatus) url += `&paymentStatus=${selectedPaymentStatus}`;
-        if (customerIdFilter) url += `&customerId=${customerIdFilter}`;
+        if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
         return (await fetch(url)).json();
-      } else if (activeTab === "EXPENSES") {
-        return (await fetch(`/api/reports/expenses/summary?startDate=${dateRange.start}&endDate=${dateRange.end}T23:59:59`)).json();
       } else if (activeTab === "PURCHASES") {
-        return (await fetch(`/api/reports/purchases/summary?startDate=${dateRange.start}&endDate=${dateRange.end}T23:59:59`)).json();
+        let url = `/api/reports/purchases/summary?startDate=${dateRange.start}&endDate=${dateRange.end}T23:59:59`;
+        if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
+        return (await fetch(url)).json();
       } else if (activeTab === "STOCK") {
         let url = `/api/reports/stock/movements?startDate=${dateRange.start}&endDate=${dateRange.end}T23:59:59`;
         if (selectedCategory) url += `&categoryId=${selectedCategory}`;
         if (selectedStockType) url += `&type=${selectedStockType}`;
+        if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
         const [movementsRes, summaryRes] = await Promise.all([
           fetch(url),
           fetch("/api/reports/stock/summary")
@@ -291,23 +263,19 @@ export default function ReportsPage() {
 
   // Resolve derived data
   const rawSales = activeTab === "SALES" ? (Array.isArray(tableQuery.data) ? tableQuery.data : (tableQuery.data?.items || [])) : [];
-  const rawExpenses = activeTab === "EXPENSES" ? (Array.isArray(tableQuery.data) ? tableQuery.data : (tableQuery.data?.items || [])) : [];
   const rawPurchases = activeTab === "PURCHASES" ? (Array.isArray(tableQuery.data) ? tableQuery.data : (tableQuery.data?.items || [])) : [];
   const rawStockMovements = activeTab === "STOCK" ? (Array.isArray(tableQuery.data) ? tableQuery.data : (tableQuery.data?.items || [])) : [];
   
   const totalItems = activeTab !== "PROFIT_LOSS" ? (Array.isArray(tableQuery.data) ? tableQuery.data.length : (tableQuery.data?.total || 0)) : 0;
 
   const rawAnalyticsSales = (activeTab === "SALES" && summaryQuery.data?.totalRevenue !== undefined) ? summaryQuery.data : null;
-  const rawAnalyticsExpenses = (activeTab === "EXPENSES" && summaryQuery.data?.categoryData !== undefined) ? summaryQuery.data : null;
   const rawAnalyticsPurchases = (activeTab === "PURCHASES" && summaryQuery.data?.supplierData !== undefined) ? summaryQuery.data : null;
   const rawAnalyticsStockMovements = activeTab === "STOCK" ? (Array.isArray(summaryQuery.data?.movements) ? summaryQuery.data.movements : (summaryQuery.data?.movements?.items || [])) : [];
   const rawStockSummary = activeTab === "STOCK" ? summaryQuery.data?.summary : { totalAssetValue: 0, totalItems: 0, lowStockCount: 0, totalProducts: 0 };
-  const profitLossData = (activeTab === "PROFIT_LOSS" && summaryQuery.data?.metrics) ? summaryQuery.data : { metrics: { totalRevenue: 0, totalHPP: 0, totalExpenses: 0, grossProfit: 0, netProfit: 0 }, expensesBreakdown: [] };
+  const profitLossData = (activeTab === "PROFIT_LOSS" && summaryQuery.data?.metrics) ? summaryQuery.data : { metrics: { totalRevenue: 0, totalHPP: 0, grossProfit: 0, netProfit: 0 } };
 
   const sales = (isLoading && rawSales.length === 0) ? placeholderSales : rawSales;
   const analyticsSales = (isLoading && !rawAnalyticsSales) ? placeholderAnalyticsSales : rawAnalyticsSales;
-  const expenses = (isLoading && rawExpenses.length === 0) ? placeholderExpenses : rawExpenses;
-  const analyticsExpenses = (isLoading && !rawAnalyticsExpenses) ? placeholderAnalyticsExpenses : rawAnalyticsExpenses;
   const purchases = (isLoading && rawPurchases.length === 0) ? placeholderPurchases : rawPurchases;
   const analyticsPurchases = (isLoading && !rawAnalyticsPurchases) ? placeholderAnalyticsPurchases : rawAnalyticsPurchases;
   const stockMovements = (isLoading && rawStockMovements.length === 0) ? placeholderStockMovements : rawStockMovements;
@@ -414,17 +382,6 @@ export default function ReportsPage() {
     };
   }, [analyticsSales]);
 
-  const expenseAnalytics = useMemo(() => {
-    if (analyticsExpenses && !Array.isArray(analyticsExpenses)) {
-      return {
-        totalExpense: analyticsExpenses.totalExpense || 0,
-        categoryData: analyticsExpenses.categoryData || [],
-        totalTransactions: analyticsExpenses.totalTransactions || 0
-      };
-    }
-    return { totalExpense: 0, categoryData: [], totalTransactions: 0 };
-  }, [analyticsExpenses]);
-
   const purchaseAnalytics = useMemo(() => {
     if (analyticsPurchases && !Array.isArray(analyticsPurchases)) {
       return {
@@ -457,10 +414,9 @@ export default function ReportsPage() {
   // --- PAGINATION ---
   const currentItems = useMemo(() => {
     if (activeTab === "SALES") return sales;
-    if (activeTab === "EXPENSES") return expenses;
     if (activeTab === "STOCK") return stockMovements;
     return purchases;
-  }, [sales, expenses, purchases, stockMovements, activeTab]);
+  }, [sales, purchases, stockMovements, activeTab]);
 
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
@@ -474,16 +430,15 @@ export default function ReportsPage() {
       url = `/api/reports/sales?startDate=${dateRange.start}&endDate=${dateRange.end}T23:59:59`;
       if (selectedCategory) url += `&categoryId=${selectedCategory}`;
       if (selectedPaymentMethod) url += `&paymentMethod=${selectedPaymentMethod}`;
-      if (selectedPaymentStatus) url += `&paymentStatus=${selectedPaymentStatus}`;
-      if (customerIdFilter) url += `&customerId=${customerIdFilter}`;
-    } else if (activeTab === "EXPENSES") {
-      url = `/api/expenses?startDate=${dateRange.start}&endDate=${dateRange.end}T23:59:59`;
+      if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
     } else if (activeTab === "PURCHASES") {
       url = `/api/purchases?startDate=${dateRange.start}&endDate=${dateRange.end}T23:59:59`;
+      if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
     } else if (activeTab === "STOCK") {
       url = `/api/reports/stock/movements?startDate=${dateRange.start}&endDate=${dateRange.end}T23:59:59`;
       if (selectedCategory) url += `&categoryId=${selectedCategory}`;
       if (selectedStockType) url += `&type=${selectedStockType}`;
+      if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
     } else if (activeTab === "PROFIT_LOSS") {
       return [profitLossData];
     }
@@ -525,19 +480,19 @@ export default function ReportsPage() {
         doc.setFontSize(22);
         doc.setTextColor(0, 0, 0); // Black for Business Name
         doc.setFont("helvetica", "bold");
-        doc.text("PD SUKSES BANGUNAN", 28, 22);
+        doc.text(settings.shopName, 28, 22);
       } catch (e) {
         doc.setFontSize(22);
         doc.setTextColor(0, 0, 0);
         doc.setFont("helvetica", "bold");
-        doc.text("PD SUKSES BANGUNAN", 14, 22);
+        doc.text(settings.shopName, 14, 22);
       }
       
       doc.setFontSize(9);
       doc.setTextColor(100);
       doc.setFont("helvetica", "normal");
-      doc.text("Jl. Citalang, Kec. Purwakarta, depan Perumahan Grha Citalang", 14, 30);
-      doc.text("Email: pdsuksesbngunan@gmail.com | Telp: +62 899-3124-264", 14, 35);
+      doc.text(settings.shopAddress, 14, 30);
+      doc.text(`Email: ${settings.shopEmail} | Telp: ${settings.shopPhone}`, 14, 35);
       
       doc.setDrawColor(15, 74, 138);
       doc.setLineWidth(0.5);
@@ -549,7 +504,7 @@ export default function ReportsPage() {
         const boxWidth = (pageWidth - 28 - 10) / 3;
         const boxHeight = 25;
         
-        const reportTitle = activeTab === "SALES" ? "LAPORAN KEUANGAN (PENJUALAN)" : activeTab === "EXPENSES" ? "LAPORAN PENGELUARAN OPERASIONAL" : activeTab === "PURCHASES" ? "LAPORAN PEMBELIAN & MODAL" : activeTab === "STOCK" ? "LAPORAN MUTASI STOK" : "LAPORAN LABA RUGI";
+        const reportTitle = activeTab === "SALES" ? "LAPORAN KEUANGAN (PENJUALAN)" : activeTab === "PURCHASES" ? "LAPORAN PEMBELIAN & MODAL" : activeTab === "STOCK" ? "LAPORAN MUTASI STOK" : "LAPORAN LABA RUGI";
         const periodLabel = period === "daily" ? "Harian" : period === "weekly" ? "Mingguan" : period === "monthly" ? "Bulanan" : period === "yearly" ? "Tahunan" : "Kustom";
         
         doc.setFontSize(14);
@@ -588,10 +543,6 @@ export default function ReportsPage() {
           drawBox(14 + (boxWidth + 5) * 2, 51 + boxHeight + 10, "NILAI COST (HPP) BONUS", formatCurrency(salesAnalytics?.totalBonusCost || 0), [239, 68, 68]);
           
           return summaryY + (boxHeight * 2) + 27;
-        } else if (activeTab === "EXPENSES") {
-          drawBox(14, 51, "TOTAL PENGELUARAN", formatCurrency(expenseAnalytics?.totalExpense || 0), [239, 68, 68]);
-          drawBox(14 + boxWidth + 5, 51, "JUMLAH DATA", `${expenseAnalytics?.totalTransactions || 0} Baris`, [15, 74, 138]);
-          drawBox(14 + (boxWidth + 5) * 2, 51, "RATA-RATA", formatCurrency(expenseAnalytics?.totalTransactions ? expenseAnalytics.totalExpense / expenseAnalytics.totalTransactions : 0), [100, 100, 100]);
         } else if (activeTab === "PURCHASES") {
           drawBox(14, 51, "TOTAL PEMBELIAN", formatCurrency(purchaseAnalytics?.totalPurchase || 0), [15, 74, 138]);
           drawBox(14 + boxWidth + 5, 51, "TOTAL TRANSAKSI", `${purchaseAnalytics?.totalTransactions || 0} Nota`, [15, 74, 138]);
@@ -601,9 +552,9 @@ export default function ReportsPage() {
           drawBox(14 + boxWidth + 5, 51, "TOTAL ASET STOK", formatCurrency(stockSummary?.totalAssetValue || 0), [16, 185, 129]);
           drawBox(14 + (boxWidth + 5) * 2, 51, "TOTAL ITEM (FISIK)", `${stockSummary?.totalItems || 0} Barang`, [15, 74, 138]);
         } else if (activeTab === "PROFIT_LOSS") {
-          const pLoss = profitLossData || { metrics: { totalRevenue: 0, totalHPP: 0, totalExpenses: 0, grossProfit: 0, netProfit: 0 }, expensesBreakdown: [] };
+          const pLoss = profitLossData || { metrics: { totalRevenue: 0, totalHPP: 0, grossProfit: 0, netProfit: 0 } };
           drawBox(14, 51, "TOTAL PENDAPATAN", formatCurrency(pLoss.metrics.totalRevenue), [15, 74, 138]);
-          drawBox(14 + boxWidth + 5, 51, "TOTAL PENGELUARAN", formatCurrency(pLoss.metrics.totalExpenses), [239, 68, 68]);
+          drawBox(14 + boxWidth + 5, 51, "TOTAL HPP", formatCurrency(pLoss.metrics.totalHPP), [245, 158, 11]);
           drawBox(14 + (boxWidth + 5) * 2, 51, "LABA BERSIH", formatCurrency(pLoss.metrics.netProfit), [16, 185, 129]);
         }
         
@@ -619,7 +570,7 @@ export default function ReportsPage() {
       if (period === "yearly" && activeTab !== "STOCK") {
         tableHead = [["Bulan", "Total Transaksi", "Nominal / Omset", "Laba Bersih (Estimasi)"]];
         const monthlyMap: Record<string, { count: number, total: number, profit: number }> = {};
-        const sourceData = activeTab === "SALES" ? analyticsSales : activeTab === "EXPENSES" ? analyticsExpenses : analyticsPurchases;
+        const sourceData = activeTab === "SALES" ? analyticsSales : analyticsPurchases;
         
         sourceData.forEach(item => {
           const dateVal = item.createdAt || item.date;
@@ -647,26 +598,15 @@ export default function ReportsPage() {
         ]);
       } else {
         if (activeTab === "SALES") {
-          tableHead = [["No", "Invoice", "Waktu", "Pelanggan", "Metode", "Status", "Total"]];
+          tableHead = [["No", "Invoice", "Waktu", "Metode", "Total"]];
           tableData = fullData.map((s: any, idx: number) => [
             idx + 1,
             s.invoiceNumber,
             period === "daily" 
               ? new Date(s.createdAt).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' })
               : new Date(s.createdAt).toLocaleDateString("id-ID", { day: '2-digit', month: 'short' }),
-            s.customer?.name || "Umum",
             s.paymentMethod || "CASH",
-            s.paymentStatus,
             formatCurrency(Number(s.totalAmount))
-          ]);
-        } else if (activeTab === "EXPENSES") {
-          tableHead = [["No", "Tanggal", "Kategori", "Keterangan", "Nominal"]];
-          tableData = fullData.map((e: any, idx: number) => [
-            idx + 1,
-            new Date(e.date).toLocaleDateString("id-ID"),
-            e.category,
-            e.description,
-            formatCurrency(Number(e.amount))
           ]);
         } else if (activeTab === "PURCHASES") {
           tableHead = [["No", "Invoice", "Pemasok", "Tanggal", "Metode", "Total"]];
@@ -694,18 +634,12 @@ export default function ReportsPage() {
           ]);
         } else if (activeTab === "PROFIT_LOSS") {
           tableHead = [["No", "Deskripsi", "Nominal"]];
-          const pLoss = profitLossData || { metrics: { totalRevenue: 0, totalHPP: 0, totalExpenses: 0, grossProfit: 0, netProfit: 0 }, expensesBreakdown: [] };
+          const pLoss = profitLossData || { metrics: { totalRevenue: 0, totalHPP: 0, grossProfit: 0, netProfit: 0 } };
           tableData = [
             [1, "Total Pendapatan", formatCurrency(pLoss.metrics.totalRevenue)],
             [2, "Dikurangi: Total HPP", `- ${formatCurrency(pLoss.metrics.totalHPP)}`],
             [3, "Laba Kotor", formatCurrency(pLoss.metrics.grossProfit)],
-            ...pLoss.expensesBreakdown.map((e: any, idx: number) => [
-              idx + 4,
-              `Pengeluaran: ${e.category}`,
-              `- ${formatCurrency(e.amount)}`
-            ]),
-            [pLoss.expensesBreakdown.length + 4, "Total Pengeluaran", `- ${formatCurrency(pLoss.metrics.totalExpenses)}`],
-            [pLoss.expensesBreakdown.length + 5, "Laba Bersih", formatCurrency(pLoss.metrics.netProfit)]
+            [4, "Laba Bersih", formatCurrency(pLoss.metrics.netProfit)]
           ];
         }
       }
@@ -837,9 +771,7 @@ export default function ReportsPage() {
             "Nomor Invoice": s.invoiceNumber,
             "Tanggal": new Date(s.createdAt).toLocaleDateString("id-ID"),
             "Waktu": new Date(s.createdAt).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' }),
-            "Pelanggan": s.customer?.name || "Umum",
             "Metode Bayar": s.paymentMethod || "CASH",
-            "Status": s.paymentStatus,
             "Total Penjualan": Number(s.totalAmount),
             "Total Modal": totalCost,
             "Laba Bersih": Number(s.totalAmount) - totalCost,
@@ -849,14 +781,6 @@ export default function ReportsPage() {
           };
         });
         sheetName = "Laporan Penjualan";
-      } else if (activeTab === "EXPENSES") {
-        data = fullData.map((e: any) => ({
-          "Tanggal": new Date(e.date).toLocaleDateString("id-ID"),
-          "Kategori": e.category,
-          "Keterangan": e.description,
-          "Nominal": Number(e.amount)
-        }));
-        sheetName = "Laporan Pengeluaran";
       } else if (activeTab === "PURCHASES") {
         data = fullData.map((p: any) => ({
           "Nomor Invoice": p.invoiceNumber,
@@ -867,15 +791,11 @@ export default function ReportsPage() {
         }));
         sheetName = "Laporan Pembelian";
       } else if (activeTab === "PROFIT_LOSS") {
-        const pLoss = profitLossData || { metrics: { totalRevenue: 0, totalHPP: 0, totalExpenses: 0, grossProfit: 0, netProfit: 0 }, expensesBreakdown: [] };
+        const pLoss = profitLossData || { metrics: { totalRevenue: 0, totalHPP: 0, grossProfit: 0, netProfit: 0 } };
         data = [
           { "Deskripsi": "Total Pendapatan", "Nominal": pLoss.metrics.totalRevenue },
           { "Deskripsi": "Total HPP", "Nominal": -pLoss.metrics.totalHPP },
           { "Deskripsi": "Laba Kotor", "Nominal": pLoss.metrics.grossProfit },
-          ...pLoss.expensesBreakdown.map((e: any) => ({
-            "Deskripsi": `Pengeluaran: ${e.category}`, "Nominal": -e.amount
-          })),
-          { "Deskripsi": "Total Pengeluaran", "Nominal": -pLoss.metrics.totalExpenses },
           { "Deskripsi": "Laba Bersih", "Nominal": pLoss.metrics.netProfit },
         ];
         sheetName = "Laba Rugi";
@@ -920,13 +840,13 @@ export default function ReportsPage() {
     <div className="p-4 lg:p-8 h-full flex flex-col space-y-4 lg:space-y-8 overflow-y-auto transition-colors duration-300 bg-bg-main mobile-bottom-space custom-scrollbar">
       {/* Tabs */}
       <div className="flex items-center space-x-2 lg:space-x-4 overflow-x-auto scrollbar-hide mt-2 lg:mt-0 flex-shrink-0">
-        {(["SALES", "EXPENSES", "PURCHASES", "STOCK", "PROFIT_LOSS"] as const)
+        {(["SALES", "PURCHASES", "STOCK", "PROFIT_LOSS"] as const)
           .map(tab => (
           <button
             key={tab}
             onClick={() => {
               if (activeTab === tab) return;
-              setActiveTab(tab);
+              setActiveTab(tab as any);
               setCurrentPage(1);
             }}
             className={cn(
@@ -936,7 +856,7 @@ export default function ReportsPage() {
                 : "bg-bg-card text-text-secondary hover:bg-bg-main border-border-default hover:text-text-primary"
             )}
           >
-            {tab === "SALES" ? "Penjualan" : tab === "EXPENSES" ? "Pengeluaran" : tab === "PURCHASES" ? "Pembelian / Modal" : tab === "STOCK" ? "Stok" : "Laba Rugi"}
+            {tab === "SALES" ? "Penjualan" : tab === "PURCHASES" ? "Pembelian / Modal" : tab === "STOCK" ? "Stok" : "Laba Rugi"}
           </button>
         ))}
       </div>
@@ -958,7 +878,6 @@ export default function ReportsPage() {
                 <>
                   <SummaryCard title="Total Pendapatan" value={formatCurrency(profitLoss.metrics.totalRevenue)} icon={<DollarSign className="w-6 h-6" />} color="blue" />
                   <SummaryCard title="Total HPP" value={formatCurrency(profitLoss.metrics.totalHPP)} icon={<Package className="w-6 h-6" />} color="orange" />
-                  <SummaryCard title="Total Pengeluaran" value={formatCurrency(profitLoss.metrics.totalExpenses)} icon={<TrendingDown className="w-6 h-6" />} color="red" />
                   <SummaryCard title="Laba Kotor" value={formatCurrency(profitLoss.metrics.grossProfit)} icon={<TrendingUp className="w-6 h-6" />} color="green" />
                   <SummaryCard title="Laba Bersih" value={formatCurrency(profitLoss.metrics.netProfit)} icon={<TrendingUp className="w-6 h-6" />} color="green" />
                 </>
@@ -968,16 +887,6 @@ export default function ReportsPage() {
                     title="Total Pendapatan" 
                     value={formatCurrency(salesAnalytics.totalRevenue)} 
                     icon={<DollarSign className="w-6 h-6" />}
-                    iconRightContent={
-                      <>
-                        <span className="text-[11px] text-text-muted font-bold">
-                          Pot. Diskon: {formatCurrency(salesAnalytics.totalDiscount || 0)}
-                        </span>
-                        <span className="text-[11px] text-text-muted font-bold">
-                          Pot. Retur: {formatCurrency(salesAnalytics.totalReturnTotal || 0)}
-                        </span>
-                      </>
-                    }
                     color="blue"
                     isLoading={isLoading}
                   />
@@ -1017,30 +926,6 @@ export default function ReportsPage() {
                       </>
                     }
                     color="orange"
-                    isLoading={isLoading}
-                  />
-                </>
-              ) : activeTab === "EXPENSES" ? (
-                <>
-                  <SummaryCard 
-                    title="Total Pengeluaran" 
-                    value={formatCurrency(expenseAnalytics.totalExpense)} 
-                    icon={<ArrowUpRight className="w-6 h-6" />}
-                    color="red"
-                    isLoading={isLoading}
-                  />
-                  <SummaryCard 
-                    title="Total Pencatatan" 
-                    value={`${expenseAnalytics.totalTransactions} Data`} 
-                    icon={<FileText className="w-6 h-6" />}
-                    color="blue"
-                    isLoading={isLoading}
-                  />
-                  <SummaryCard 
-                    title="Rata-rata Pengeluaran" 
-                    value={formatCurrency(expenseAnalytics.totalTransactions ? expenseAnalytics.totalExpense / expenseAnalytics.totalTransactions : 0)} 
-                    icon={<TrendingUp className="w-6 h-6" />}
-                    color="red"
                     isLoading={isLoading}
                   />
                 </>
@@ -1217,79 +1102,91 @@ export default function ReportsPage() {
               )}
             </div>
 
-            {/* Row 2: Dropdowns (Desktop Only) */}
-            {activeTab === "SALES" && (
+            {/* Row 2: Search & Dropdowns (Desktop Only) */}
+            {activeTab !== "PROFIT_LOSS" && (
               <div className="hidden lg:flex flex-row items-end gap-3 lg:gap-4 pt-4 border-t border-border-subtle">
-                <div className="flex-1 w-full space-y-1">
-                  <label className="text-[10px] font-black text-text-muted uppercase tracking-wider ml-1">Kategori</label>
-                  <SearchableSelect
-                    options={[
-                      { id: "", name: "Semua Kategori" },
-                      ...categories.map((c: any) => ({ id: c.id, name: c.name }))
-                    ]}
-                    value={selectedCategory}
-                    onChange={(val) => setSelectedCategory(val)}
-                    placeholder="Semua Kategori"
-                  />
+                {/* Search */}
+                <div className="flex-1 lg:max-w-md w-full space-y-1">
+                  <label className="text-[10px] font-black text-text-muted uppercase tracking-wider ml-1">Pencarian</label>
+                  <div className="relative group w-full">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted w-4 h-4 transition-colors group-focus-within:text-brand-primary" />
+                    <input
+                      type="text"
+                      placeholder={activeTab === "SALES" ? "Cari no invoice, kasir..." : activeTab === "STOCK" ? "Cari produk, kategori..." : "Cari no invoice, pemasok..."}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-11 pr-10 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/50 focus:border-brand-primary bg-bg-main border-border-default text-text-primary transition-all placeholder:text-text-muted shadow-sm h-[44px] font-bold"
+                    />
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-muted transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                <div className="flex-1 w-full space-y-1">
-                  <label className="text-[10px] font-black text-text-muted uppercase tracking-wider ml-1">Metode Bayar</label>
-                  <select
-                    value={selectedPaymentMethod}
-                    onChange={(e) => setSelectedPaymentMethod(e.target.value)}
-                    className="w-full px-4 py-2 rounded-xl border text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-primary bg-bg-main border-border-default text-text-primary h-[44px] transition-all [&>option]:bg-bg-main [&>option]:text-text-primary"
-                  >
-                    <option value="">Semua Metode</option>
-                    {["CASH", "TRANSFER", "DEBT"].map(m => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
-                </div>
+                {activeTab === "SALES" && (
+                  <>
+                    <div className="flex-1 w-full space-y-1">
+                      <label className="text-[10px] font-black text-text-muted uppercase tracking-wider ml-1">Kategori</label>
+                      <SearchableSelect
+                        options={[
+                          { id: "", name: "Semua Kategori" },
+                          ...categories.map((c: any) => ({ id: c.id, name: c.name }))
+                        ]}
+                        value={selectedCategory}
+                        onChange={(val) => setSelectedCategory(val)}
+                        placeholder="Semua Kategori"
+                      />
+                    </div>
+                    <div className="flex-1 w-full space-y-1">
+                      <label className="text-[10px] font-black text-text-muted uppercase tracking-wider ml-1">Metode Bayar</label>
+                      <select
+                        value={selectedPaymentMethod}
+                        onChange={(e) => setSelectedPaymentMethod(e.target.value)}
+                        className="w-full px-4 py-2 rounded-xl border text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-primary bg-bg-main border-border-default text-text-primary h-[44px] transition-all [&>option]:bg-bg-main [&>option]:text-text-primary"
+                      >
+                        <option value="">Semua Metode</option>
+                        {["CASH", "TRANSFER", "DEBT"].map(m => (
+                          <option key={m} value={m}>{m}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
+                )}
 
-                <div className="flex-1 w-full space-y-1">
-                  <label className="text-[10px] font-black text-text-muted uppercase tracking-wider ml-1">Status</label>
-                  <select
-                    value={selectedPaymentStatus}
-                    onChange={(e) => setSelectedPaymentStatus(e.target.value)}
-                    className="w-full px-4 py-2 rounded-xl border text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-primary bg-bg-main border-border-default text-text-primary h-[44px] transition-all [&>option]:bg-bg-main [&>option]:text-text-primary"
-                  >
-                    <option value="">Semua Status</option>
-                    <option value="LUNAS">Lunas</option>
-                    <option value="PIUTANG">Belum Lunas</option>
-                  </select>
-                </div>
-              </div>
-            )}
-
-            {activeTab === "STOCK" && (
-              <div className="hidden lg:flex flex-row items-end gap-3 lg:gap-4 pt-4 border-t border-border-subtle">
-                <div className="flex-1 w-full space-y-1">
-                  <label className="text-[10px] font-black text-text-muted uppercase tracking-wider ml-1">Kategori</label>
-                  <SearchableSelect
-                    options={[
-                      { id: "", name: "Semua Kategori" },
-                      ...categories.map((c: any) => ({ id: c.id, name: c.name }))
-                    ]}
-                    value={selectedCategory}
-                    onChange={(val) => setSelectedCategory(val)}
-                    placeholder="Semua Kategori"
-                  />
-                </div>
-
-                <div className="flex-1 w-full space-y-1">
-                  <label className="text-[10px] font-black text-text-muted uppercase tracking-wider ml-1">Jenis Mutasi</label>
-                  <select
-                    value={selectedStockType}
-                    onChange={(e) => setSelectedStockType(e.target.value)}
-                    className="w-full px-4 py-2 rounded-xl border text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-primary bg-bg-main border-border-default text-text-primary h-[44px] transition-all [&>option]:bg-bg-main [&>option]:text-text-primary"
-                  >
-                    <option value="">Semua Mutasi</option>
-                    <option value="IN">Masuk</option>
-                    <option value="OUT">Keluar</option>
-                    <option value="ADJUSTMENT">Penyesuaian</option>
-                  </select>
-                </div>
+                {activeTab === "STOCK" && (
+                  <>
+                    <div className="flex-1 w-full space-y-1">
+                      <label className="text-[10px] font-black text-text-muted uppercase tracking-wider ml-1">Kategori</label>
+                      <SearchableSelect
+                        options={[
+                          { id: "", name: "Semua Kategori" },
+                          ...categories.map((c: any) => ({ id: c.id, name: c.name }))
+                        ]}
+                        value={selectedCategory}
+                        onChange={(val) => setSelectedCategory(val)}
+                        placeholder="Semua Kategori"
+                      />
+                    </div>
+                    <div className="flex-1 w-full space-y-1">
+                      <label className="text-[10px] font-black text-text-muted uppercase tracking-wider ml-1">Jenis Mutasi</label>
+                      <select
+                        value={selectedStockType}
+                        onChange={(e) => setSelectedStockType(e.target.value)}
+                        className="w-full px-4 py-2 rounded-xl border text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-primary bg-bg-main border-border-default text-text-primary h-[44px] transition-all [&>option]:bg-bg-main [&>option]:text-text-primary"
+                      >
+                        <option value="">Semua Mutasi</option>
+                        <option value="IN">Masuk</option>
+                        <option value="OUT">Keluar</option>
+                        <option value="ADJUSTMENT">Penyesuaian</option>
+                      </select>
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -1373,32 +1270,6 @@ export default function ReportsPage() {
                         </div>
                       )}
                     </div>
-                  </div>
-                </div>
-              ) : activeTab === "EXPENSES" ? (
-                <div className="p-4 lg:p-6 rounded-2xl lg:rounded-3xl border shadow-sm bg-bg-card border-border-default flex flex-col h-[400px]">
-                  <h3 className="text-xs font-bold text-text-muted uppercase tracking-wider mb-4">
-                    <span className="block w-fit">Distribusi Pengeluaran</span>
-                  </h3>
-                  <div className="flex-1 min-h-[250px] flex items-center justify-center">
-                    {expenseAnalytics.categoryData.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie data={expenseAnalytics.categoryData} cx="50%" cy="50%" outerRadius="80%" dataKey="value" nameKey="name" label={(entry) => entry.name}>
-                            {expenseAnalytics.categoryData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <Tooltip cursor={false} formatter={(value: number) => formatCurrency(value)} />
-                          <Legend />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center text-text-muted">
-                        <FileText className="w-10 h-10 mb-2 opacity-20" />
-                        <span className="text-xs font-bold">Belum ada data pengeluaran</span>
-                      </div>
-                    )}
                   </div>
                 </div>
               ) : activeTab === "PURCHASES" ? (
@@ -1523,19 +1394,7 @@ export default function ReportsPage() {
                       <td className="px-6 py-4 font-bold text-text-primary border-b border-border-default"><span className="block w-fit">Laba Kotor</span></td>
                       <td className="px-6 py-4 text-right font-bold text-text-primary border-b border-border-default"><span className="block w-fit ml-auto">{formatCurrency(profitLoss.metrics.grossProfit)}</span></td>
                     </tr>
-                    <tr>
-                      <td colSpan={2} className="px-6 py-2 text-xs font-bold text-text-muted uppercase bg-bg-muted/50 border-b border-border-default" data-shimmer-ignore>Rincian Pengeluaran</td>
-                    </tr>
-                    {profitLoss.expensesBreakdown?.map((exp: any, i: number) => (
-                      <tr key={i} className="hover:bg-bg-muted/30 transition-colors">
-                        <td className="px-6 py-3 pl-10 border-b border-border-default"><span className="block w-fit">{exp.category}</span></td>
-                        <td className="px-6 py-3 text-right text-status-danger border-b border-border-default"><span className="block w-fit ml-auto">- {formatCurrency(exp.amount)}</span></td>
-                      </tr>
-                    ))}
-                    <tr className="hover:bg-bg-muted/30 transition-colors">
-                      <td className="px-6 py-4 font-medium text-status-danger border-b border-border-default"><span className="block w-fit">Total Pengeluaran</span></td>
-                      <td className="px-6 py-4 text-right font-medium text-status-danger border-b border-border-default"><span className="block w-fit ml-auto">- {formatCurrency(profitLoss.metrics.totalExpenses)}</span></td>
-                    </tr>
+                    
                     <tr className="hover:bg-bg-muted/30 transition-colors bg-status-success/10">
                       <td className="px-6 py-5 font-bold text-lg text-text-primary border-b border-border-default"><span className="block w-fit">Laba Bersih</span></td>
                       <td className="px-6 py-5 text-right font-bold text-lg text-status-success border-b border-border-default"><span className="block w-fit ml-auto">{formatCurrency(profitLoss.metrics.netProfit)}</span></td>
@@ -1548,7 +1407,7 @@ export default function ReportsPage() {
           <div className="rounded-2xl lg:rounded-3xl border shadow-sm flex flex-col bg-bg-card border-border-default flex-shrink-0">
             <div className="p-4 lg:p-6 border-b border-border-subtle flex items-center justify-between flex-shrink-0">
               <h3 className="text-xs lg:text-sm font-black text-text-primary uppercase tracking-widest">
-                <span className="block w-fit">Detail Riwayat {activeTab === "SALES" ? "Transaksi" : activeTab === "EXPENSES" ? "Pengeluaran" : "Pembelian"}</span>
+                <span className="block w-fit">Detail Riwayat {activeTab === "SALES" ? "Transaksi" : "Pembelian"}</span>
               </h3>
               <p className="text-[10px] font-bold text-text-muted">{totalItems} Total Data</p>
             </div>
@@ -1560,18 +1419,8 @@ export default function ReportsPage() {
                   {activeTab === "SALES" ? (
                     <tr className="bg-bg-main">
                       <th className="px-6 py-4 text-xs font-bold text-text-muted uppercase tracking-wider">Invoice & Waktu</th>
-                      <th className="px-6 py-4 text-xs font-bold text-text-muted uppercase tracking-wider">Pelanggan</th>
                       <th className="px-6 py-4 text-xs font-bold text-text-muted uppercase tracking-wider">Pembayaran</th>
                       <th className="px-6 py-4 text-xs font-bold text-text-muted uppercase tracking-wider text-right">Total</th>
-                      <th className="px-6 py-4 text-xs font-bold text-text-muted uppercase tracking-wider text-center">Status</th>
-                      <th className="px-6 py-4 text-xs font-bold text-text-muted uppercase tracking-wider text-right">Aksi</th>
-                    </tr>
-                  ) : activeTab === "EXPENSES" ? (
-                    <tr className="bg-bg-main">
-                      <th className="px-6 py-4 text-xs font-bold text-text-muted uppercase tracking-wider">Tanggal</th>
-                      <th className="px-6 py-4 text-xs font-bold text-text-muted uppercase tracking-wider">Kategori</th>
-                      <th className="px-6 py-4 text-xs font-bold text-text-muted uppercase tracking-wider">Keterangan</th>
-                      <th className="px-6 py-4 text-xs font-bold text-text-muted uppercase tracking-wider text-right">Nominal</th>
                       <th className="px-6 py-4 text-xs font-bold text-text-muted uppercase tracking-wider text-right">Aksi</th>
                     </tr>
                   ) : activeTab === "STOCK" ? (
@@ -1597,9 +1446,9 @@ export default function ReportsPage() {
                 <tbody className="divide-y divide-border-subtle transition-colors">
                   {(!isLoading && currentItems.length === 0) ? (
                     <tr>
-                      <td colSpan={activeTab === "EXPENSES" ? 5 : activeTab === "STOCK" ? 6 : 6} className="px-6 py-12 text-center">
+                      <td colSpan={activeTab === "STOCK" ? 6 : 6} className="px-6 py-12 text-center">
                         <EmptyState 
-                          icon={activeTab === "SALES" ? Receipt : activeTab === "EXPENSES" ? ArrowUpRight : activeTab === "PURCHASES" ? Package : Box}
+                          icon={activeTab === "SALES" ? Receipt : activeTab === "PURCHASES" ? Package : Box}
                           title="Data Kosong"
                           description={`Belum ada data ${activeTab.toLowerCase()} untuk periode ini. Silakan sesuaikan filter atau pilih rentang waktu lain.`}
                         />
@@ -1623,9 +1472,7 @@ export default function ReportsPage() {
                             {new Date(sale.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                           </p>
                         </td>
-                        <td className="px-6 py-4">
-                          <p className="text-sm font-bold text-text-secondary">{sale.customer?.name || "Pelanggan Umum"}</p>
-                        </td>
+
                         <td className="px-6 py-4">
                           <div className="flex items-center space-x-2">
                             {sale.paymentMethod === 'CASH' ? <DollarSign className="w-3.5 h-3.5 text-status-success" /> : <CreditCard className="w-3.5 h-3.5 text-brand-primary" />}
@@ -1635,16 +1482,7 @@ export default function ReportsPage() {
                         <td className="px-6 py-4 text-right">
                           <p className="text-base font-black text-text-primary">{formatCurrency(Number(sale.totalAmount))}</p>
                         </td>
-                        <td className="px-6 py-4 text-center">
-                          <span className={cn(
-                            "px-3 py-1 text-[10px] font-black rounded-full uppercase",
-                            sale.paymentStatus === "LUNAS" 
-                              ? "bg-status-success/10 text-status-success" 
-                              : "bg-status-warning/10 text-status-warning"
-                          )}>
-                            {sale.paymentStatus}
-                          </span>
-                        </td>
+
                         <td className="px-6 py-4 text-right">
                           <div className="flex justify-end gap-2">
                             <button 
@@ -1662,37 +1500,6 @@ export default function ReportsPage() {
                                </button>
                             )}
                           </div>
-                        </td>
-                      </tr>
-                    ))
-                  ) : activeTab === "EXPENSES" ? (
-                    currentItems.map((expense) => (
-                      <tr 
-                        key={expense.id} 
-                        onClick={() => setSelectedExpense(expense)}
-                        className="transition-colors hover:bg-bg-main/50 group cursor-pointer"
-                      >
-                        <td className="px-6 py-4">
-                          <p className="text-sm font-bold text-text-primary">
-                            {new Date(expense.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                          </p>
-                        </td>
-                        <td className="px-6 py-4">
-                          <p className="text-sm font-bold text-text-secondary">{expense.category}</p>
-                        </td>
-                        <td className="px-6 py-4">
-                          <p className="text-sm text-text-muted">{expense.description || "-"}</p>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <p className="text-base font-black text-status-danger">{formatCurrency(Number(expense.amount))}</p>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); setSelectedExpense(expense); }}
-                            className="p-2 rounded-lg transition-all text-text-muted hover:text-brand-primary hover:bg-brand-light opacity-70 group-hover:opacity-100"
-                          >
-                            <Eye className="w-5 h-5" />
-                          </button>
                         </td>
                       </tr>
                     ))
@@ -1804,7 +1611,7 @@ export default function ReportsPage() {
                 {(!isLoading && currentItems.length === 0) ? (
                   <div className="py-12">
                     <EmptyState 
-                      icon={activeTab === "SALES" ? Receipt : activeTab === "EXPENSES" ? ArrowUpRight : activeTab === "PURCHASES" ? Package : Box}
+                      icon={activeTab === "SALES" ? Receipt : activeTab === "PURCHASES" ? Package : Box}
                       title="Data Kosong"
                       description={`Belum ada data ${activeTab.toLowerCase()} yang ditemukan.`}
                     />
@@ -1828,17 +1635,9 @@ export default function ReportsPage() {
                             {new Date(sale.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} • {new Date(sale.createdAt).toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit' })}
                           </p>
                         </div>
-                        <span className={cn(
-                          "px-2 py-0.5 text-[8px] font-black rounded-full uppercase",
-                          sale.paymentStatus === "LUNAS" 
-                            ? "bg-status-success/10 text-status-success" 
-                            : "bg-status-warning/10 text-status-warning"
-                        )}>
-                          {sale.paymentStatus}
-                        </span>
+
                       </div>
-                      <p className="text-sm font-bold text-text-secondary mb-3">{sale.customer?.name || "Umum"}</p>
-                      <div className="flex items-center justify-between pt-3 border-t border-border-subtle">
+                      <div className="flex items-center justify-between pt-3 border-t border-border-subtle mt-3">
                         <div className="flex items-center space-x-1.5">
                           <span className="text-[9px] font-black text-text-muted uppercase tracking-tighter">{formatPaymentMethod(sale.paymentMethod || "CASH")}</span>
                         </div>
@@ -1853,23 +1652,6 @@ export default function ReportsPage() {
                             </button>
                           )}
                         </div>
-                      </div>
-                    </div>
-                  ))
-                ) : activeTab === "EXPENSES" ? (
-                  currentItems.map((expense) => (
-                    <div 
-                      key={expense.id} 
-                      onClick={() => setSelectedExpense(expense)}
-                      className="p-4 rounded-2xl border border-border-default bg-bg-card active:scale-[0.98] transition-all"
-                    >
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs font-black text-text-primary uppercase tracking-widest">{expense.category}</span>
-                        <p className="text-[10px] text-text-muted font-bold">{new Date(expense.date).toLocaleDateString('id-ID')}</p>
-                      </div>
-                      <p className="text-xs text-text-secondary mb-3">{expense.description || "-"}</p>
-                      <div className="flex justify-end pt-3 border-t border-border-subtle">
-                        <p className="text-base font-black text-status-danger">{formatCurrency(Number(expense.amount))}</p>
                       </div>
                     </div>
                   ))
@@ -2037,6 +1819,31 @@ export default function ReportsPage() {
             </div>
 
             <div className="p-6 space-y-6 overflow-y-auto">
+              {/* Search Filter */}
+              {activeTab !== "PROFIT_LOSS" && (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-text-muted uppercase tracking-widest">Pencarian</label>
+                  <div className="relative group w-full">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted w-4 h-4 transition-colors group-focus-within:text-brand-primary" />
+                    <input
+                      type="text"
+                      placeholder={activeTab === "SALES" ? "Cari no invoice, kasir..." : activeTab === "STOCK" ? "Cari produk, kategori..." : "Cari no invoice, pemasok..."}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-11 pr-10 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/50 focus:border-brand-primary bg-bg-main border-border-default text-text-primary transition-all placeholder:text-text-muted shadow-sm h-[44px] font-bold"
+                    />
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-muted transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Category Filter */}
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-text-muted uppercase tracking-widest">Kategori Barang</label>
@@ -2084,24 +1891,6 @@ export default function ReportsPage() {
                 </div>
               </div>
 
-              {/* Status Filter */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-text-muted uppercase tracking-widest">Status Pembayaran</label>
-                <div className="flex gap-2">
-                  {["", "LUNAS", "BELUM_LUNAS"].map(st => (
-                    <button 
-                      key={st}
-                      onClick={() => setSelectedPaymentStatus(st)}
-                      className={cn(
-                        "flex-1 px-4 py-2 rounded-xl text-[10px] font-bold uppercase border transition-all",
-                        selectedPaymentStatus === st ? "bg-brand-primary text-text-inverse border-brand-primary" : "bg-bg-card border-border-default text-text-primary"
-                      )}
-                    >
-                      {st === "" ? "Semua" : st === "LUNAS" ? "Lunas" : "Blm Lunas"}
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
 
             <div className="p-4 bg-bg-main border-t border-border-subtle flex-shrink-0">
@@ -2138,13 +1927,8 @@ export default function ReportsPage() {
             </div>
             
             <div className="p-4 lg:p-6 overflow-y-auto custom-scrollbar flex-1">
-              <div className="flex flex-col lg:grid lg:grid-cols-2 gap-4 lg:gap-6 mb-6">
+              <div className="flex flex-col gap-4 lg:gap-6 mb-6">
                 <div className="bg-bg-main p-4 rounded-xl border border-border-subtle">
-                  <p className="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-1">Pelanggan</p>
-                  <p className="text-sm font-bold text-text-primary">{selectedSale.customer?.name || "Umum"}</p>
-                  {selectedSale.customer?.phone && <p className="text-xs text-text-muted">{selectedSale.customer.phone}</p>}
-                </div>
-                <div className="bg-bg-main p-4 rounded-xl border border-border-subtle lg:text-right">
                   <p className="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-1">Waktu Transaksi</p>
                   <p className="text-sm font-bold text-text-primary">
                     {new Date(selectedSale.createdAt).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
@@ -2263,17 +2047,6 @@ export default function ReportsPage() {
                     <p className="text-sm font-bold text-text-primary">{formatPaymentMethod(selectedSale.paymentMethod)}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-1">Status</p>
-                  <span className={cn(
-                    "px-3 py-1 text-[10px] font-bold rounded-full uppercase inline-block",
-                    selectedSale.paymentStatus === "LUNAS" 
-                      ? "bg-status-success/10 text-status-success" 
-                      : "bg-status-warning/10 text-status-warning"
-                  )}>
-                    {selectedSale.paymentStatus}
-                  </span>
-                </div>
               </div>
 
               <div className="text-center lg:text-right bg-brand-light/30 p-4 lg:p-6 rounded-2xl border border-brand-primary/20">
@@ -2357,68 +2130,6 @@ export default function ReportsPage() {
               <button 
                 onClick={() => setSelectedSale(null)}
                 className="w-full lg:w-auto lg:flex-1 min-h-[44px] py-3 border rounded-xl font-bold text-sm transition-all bg-bg-card border-border-default text-text-secondary hover:bg-bg-main"
-              >
-                Tutup
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Expense Detail Modal */}
-      {selectedExpense && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[80] flex items-end lg:items-center justify-center lg:p-4">
-          <div className="bg-bg-modal w-full rounded-t-3xl lg:rounded-[2.5rem] shadow-2xl overflow-hidden animate-in slide-in-from-bottom-full lg:slide-in-from-bottom-0 lg:zoom-in lg:fade-in duration-300 ease-out flex flex-col max-h-[90vh] lg:max-w-xl">
-            <div className="lg:hidden w-full flex justify-center pt-3 pb-1 bg-status-danger">
-              <div className="w-12 h-1.5 bg-white/30 rounded-full"></div>
-            </div>
-            <div className="p-4 lg:p-6 border-b border-border-subtle flex items-center justify-between bg-status-danger flex-shrink-0">
-              <div>
-                <h3 className="text-base lg:text-lg font-black text-text-inverse">Detail Pengeluaran</h3>
-                <p className="text-[10px] lg:text-xs font-medium text-text-inverse/80 mt-1">
-                  {new Date(selectedExpense.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
-                </p>
-              </div>
-              <button onClick={() => setSelectedExpense(null)} className="text-text-inverse/60 hover:text-text-inverse min-w-[44px] min-h-[44px] flex items-center justify-center p-2 -mr-2">
-                <X className="w-5 h-5 lg:w-6 h-6" />
-              </button>
-            </div>
-            
-            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-bg-main p-4 rounded-xl border border-border-subtle">
-                  <p className="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-1">Kategori</p>
-                  <p className="text-sm font-bold text-text-primary uppercase">{selectedExpense.category}</p>
-                </div>
-                <div className="bg-bg-main p-4 rounded-xl border border-border-subtle text-right">
-                  <p className="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-1">Nominal</p>
-                  <p className="text-lg font-black text-status-danger">{formatCurrency(Number(selectedExpense.amount))}</p>
-                </div>
-              </div>
-
-              <div className="bg-bg-main p-4 rounded-xl border border-border-subtle">
-                <p className="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-1">Keterangan</p>
-                <p className="text-sm text-text-secondary leading-relaxed">{selectedExpense.description || "Tidak ada keterangan"}</p>
-              </div>
-
-              {selectedExpense.receiptPath && (
-                <div className="space-y-2">
-                  <p className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">Bukti Pengeluaran</p>
-                  <div className="rounded-2xl border border-border-default overflow-hidden bg-bg-card">
-                    <img 
-                      src={selectedExpense.receiptPath} 
-                      alt="Bukti Pengeluaran" 
-                      className="w-full h-auto object-contain max-h-[300px]"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="p-4 lg:p-6 border-t border-border-subtle bg-bg-main/50">
-              <button 
-                onClick={() => setSelectedExpense(null)}
-                className="w-full py-3 bg-bg-card border border-border-default text-text-primary rounded-xl font-bold text-sm hover:bg-bg-main transition-all"
               >
                 Tutup
               </button>

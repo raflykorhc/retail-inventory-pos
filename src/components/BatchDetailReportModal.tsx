@@ -100,7 +100,6 @@ export const BatchDetailReportModal: React.FC<BatchDetailReportModalProps> = ({
       return {
         id: alloc.id,
         no: idx + 1,
-        customerName: saleItem.sale?.customer?.name || "Pelanggan Umum",
         createdAt: saleItem.sale?.createdAt || batch.createdAt,
         invoiceNumber: saleItem.sale?.invoiceNumber || "N/A",
         qtyText: `${qtyInSaleUnit.toLocaleString("id-ID")} ${unitName}`,
@@ -212,7 +211,6 @@ export const BatchDetailReportModal: React.FC<BatchDetailReportModalProps> = ({
 
     const dataToExport = processedAllocations.map((alloc: any) => ({
       "Tanggal": new Date(alloc.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
-      "Pelanggan": alloc.customerName,
       "No Invoice": alloc.invoiceNumber,
       "Kuantitas Terjual": alloc.qtyText,
       "Harga Satuan": alloc.unitPrice,
@@ -233,7 +231,7 @@ export const BatchDetailReportModal: React.FC<BatchDetailReportModalProps> = ({
       ["Keuntungan Real", stats.profitSold],
       ["Sisa Stok di Sistem", formatMultiUnitStock(batch.currentQuantity, batch.product?.prices || [])],
       [], // Empty separator
-      ["Tanggal", "Pelanggan", "No Invoice", "Kuantitas Terjual", "Harga Satuan", "Tipe", "Subtotal (Omset)"]
+      ["Tanggal", "No Invoice", "Kuantitas Terjual", "Harga Satuan", "Tipe", "Subtotal (Omset)"]
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(metaData);
@@ -247,8 +245,7 @@ export const BatchDetailReportModal: React.FC<BatchDetailReportModalProps> = ({
     // Formatting widths
     ws["!cols"] = [
       { wch: 15 }, // Tanggal
-      { wch: 25 }, // Pelanggan
-      { wch: 20 }, // Invoice
+      { wch: 20 }, // No Invoice
       { wch: 18 }, // Kuantitas
       { wch: 15 }, // Harga Satuan
       { wch: 12 }, // Tipe
@@ -556,7 +553,6 @@ export const BatchDetailReportModal: React.FC<BatchDetailReportModalProps> = ({
                       <tr className="bg-bg-main border-b border-border-subtle">
                         <th className="px-5 py-3 text-xs font-bold text-text-muted uppercase tracking-wider text-center w-12">No</th>
                         <th className="px-5 py-3 text-xs font-bold text-text-muted uppercase tracking-wider">Tanggal</th>
-                        <th className="px-5 py-3 text-xs font-bold text-text-muted uppercase tracking-wider">Pelanggan</th>
                         <th className="px-5 py-3 text-xs font-bold text-text-muted uppercase tracking-wider">No Invoice</th>
                         <th className="px-5 py-3 text-xs font-bold text-text-muted uppercase tracking-wider text-center">Kuantitas</th>
                         <th className="px-5 py-3 text-xs font-bold text-text-muted uppercase tracking-wider text-right">Harga Jual</th>
@@ -582,9 +578,6 @@ export const BatchDetailReportModal: React.FC<BatchDetailReportModalProps> = ({
                                 hour: "2-digit",
                                 minute: "2-digit"
                               })}
-                            </td>
-                            <td className="px-5 py-3 text-sm font-black text-text-primary">
-                              {alloc.customerName}
                             </td>
                             <td className="px-5 py-3 text-xs font-mono font-bold text-brand-primary">
                               #{alloc.invoiceNumber.slice(-8).toUpperCase()}
