@@ -21,7 +21,7 @@ const GridProductCard = memo(({ product, onAdd, onSelectBatch, showImages }: {
 }) => (
   <div
     onClick={() => onAdd(product)}
-    className="w-full h-full flex flex-col p-3 lg:p-4 rounded-[24px] lg:rounded-[32px] transition-all cursor-pointer group relative overflow-hidden bg-transparent border border-gray-200 hover:border-transparent hover:bg-bg-card hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)]"
+    className="w-full h-full flex flex-col p-3 lg:p-4 rounded-[24px] lg:rounded-[32px] transition-all cursor-pointer group relative overflow-hidden bg-transparent border border-border-subtle hover:border-transparent hover:bg-bg-card hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)]"
     style={{ willChange: 'transform', contain: 'layout style' }}
   >
     <div className="absolute top-2.5 lg:top-3 right-2.5 lg:right-3 z-10">
@@ -76,7 +76,7 @@ const ListProductRow = memo(({ product, onAdd, onSelectBatch, showImages }: {
   onSelectBatch: (p: any) => void;
   showImages: boolean;
 }) => (
-  <div className="py-1.5 px-1 border-b border-gray-200">
+  <div className="py-1.5 px-1 border-b border-border-subtle">
     <div
       onClick={() => onAdd(product)}
       className="flex items-center p-3 rounded-[24px] transition-all cursor-pointer group bg-transparent border border-transparent hover:bg-bg-card hover:shadow-md"

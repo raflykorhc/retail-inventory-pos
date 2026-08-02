@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, History, ChevronDown, Package } from "lucide-react";
+import { X, History, ChevronDown, Package, Eye } from "lucide-react";
 import { cn, formatCurrency } from "../../lib/utils";
 import { useCartStore } from "../../store/useCartStore";
 
@@ -14,18 +14,15 @@ export const HistoryModal: React.FC = () => {
   const [historyTotal, setHistoryTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<any | null>(null);
-  const [viewMode, setViewMode] = useState<"today" | "pending">("today");
   const historyLimit = 10;
 
   const isOpen = activeModal === "history";
 
-  const fetchHistory = async (page = 1, mode = viewMode) => {
+  const fetchHistory = async (page = 1) => {
     setIsLoading(true);
     try {
       const today = new Date().toISOString().split("T")[0];
-      const query = mode === "today" 
-        ? `startDate=${today}&endDate=${today}&page=${page}&limit=${historyLimit}`
-        : `hasPending=true&isDeliveryRequired=false&page=${page}&limit=${historyLimit}`;
+      const query = `startDate=${today}&endDate=${today}&page=${page}&limit=${historyLimit}`;
       const response = await fetch(`/api/reports/sales?${query}`);
       const data = await response.json();
       const items = Array.isArray(data) ? data : (data.items || []);
@@ -41,9 +38,9 @@ export const HistoryModal: React.FC = () => {
 
   useEffect(() => {
     if (isOpen) {
-      fetchHistory(1, viewMode);
+      fetchHistory(1);
     }
-  }, [isOpen, viewMode]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -56,34 +53,10 @@ export const HistoryModal: React.FC = () => {
         </div>
         <div className="p-4 lg:p-6 border-b flex items-center justify-between bg-brand-primary border-border-subtle flex-shrink-0">
           <h3 className="text-base lg:text-lg font-black text-text-inverse">
-            {viewMode === "today" ? "Riwayat Transaksi Hari Ini" : "Daftar Barang Titipan"}
+            Riwayat Transaksi Hari Ini
           </h3>
           <button onClick={() => setActiveModal(null)} className="text-text-inverse/60 hover:text-text-inverse p-2 -mr-2 lg:mr-0 min-w-[44px] min-h-[44px] flex items-center justify-center">
             <X className="w-5 h-5 lg:w-6 h-6" />
-          </button>
-        </div>
-        <div className="flex border-b border-border-subtle bg-bg-main shrink-0">
-          <button
-            onClick={() => setViewMode("today")}
-            className={cn(
-              "flex-1 py-3 text-xs lg:text-sm font-bold transition-colors border-b-2",
-              viewMode === "today" 
-                ? "border-brand-primary text-brand-primary" 
-                : "border-transparent text-text-muted hover:text-text-primary hover:bg-black/5"
-            )}
-          >
-            Transaksi Hari Ini
-          </button>
-          <button
-            onClick={() => setViewMode("pending")}
-            className={cn(
-              "flex-1 py-3 text-xs lg:text-sm font-bold transition-colors border-b-2",
-              viewMode === "pending" 
-                ? "border-brand-primary text-brand-primary" 
-                : "border-transparent text-text-muted hover:text-text-primary hover:bg-black/5"
-            )}
-          >
-            Menunggu Pengambilan
           </button>
         </div>
         <div className="p-4 lg:p-6 overflow-y-auto custom-scrollbar flex-1">
@@ -98,7 +71,6 @@ export const HistoryModal: React.FC = () => {
                 <tr className="bg-bg-main">
                   <th className="px-4 py-3 text-xs font-bold text-text-muted uppercase tracking-wider">Invoice</th>
                   <th className="px-4 py-3 text-xs font-bold text-text-muted uppercase tracking-wider">Waktu</th>
-                  <th className="px-4 py-3 text-xs font-bold text-text-muted uppercase tracking-wider">Pelanggan</th>
                   <th className="px-4 py-3 text-xs font-bold text-text-muted uppercase tracking-wider text-right">Total</th>
                   <th className="px-4 py-3 text-xs font-bold text-text-muted uppercase tracking-wider text-center">Aksi</th>
                 </tr>
@@ -113,7 +85,6 @@ export const HistoryModal: React.FC = () => {
                     >
                       <td className="px-4 py-3 font-mono text-xs text-text-muted">{h.invoiceNumber}</td>
                       <td className="px-4 py-3 text-xs text-text-secondary">{new Date(h.createdAt).toLocaleString()}</td>
-                      <td className="px-4 py-3 text-xs font-bold text-text-primary">{h.customer?.name || "Umum"}</td>
                       <td className="px-4 py-3 text-xs font-black text-right text-text-primary">
                         <div>{formatCurrency(Number(h.totalAmount))}</div>
                         {h.paymentMethod && h.paymentMethod.startsWith("SPLIT:") && (
@@ -126,15 +97,19 @@ export const HistoryModal: React.FC = () => {
                         )}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <div className="flex flex-col items-center space-y-1">
-                          {/* Removed DO Button */}
-                        </div>
+                        <button 
+                          className="p-1.5 rounded-lg text-text-muted hover:text-brand-primary hover:bg-brand-primary/10 transition-colors inline-flex items-center justify-center"
+                          onClick={(e) => { e.stopPropagation(); setSelectedTransaction(h); }}
+                          title="Lihat Detail"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="px-4 py-12 text-center text-text-muted">
+                    <td colSpan={4} className="px-4 py-12 text-center text-text-muted">
                       <History className="w-12 h-12 mx-auto mb-3 opacity-20" />
                       <p className="text-sm font-bold">Belum ada transaksi hari ini</p>
                       <p className="text-[10px]">Transaksi yang Anda buat hari ini akan muncul di sini.</p>
@@ -193,9 +168,8 @@ export const HistoryModal: React.FC = () => {
             </div>
             <div className="p-4 lg:p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
               <div>
-                <h4 className="text-xs font-bold text-text-muted uppercase tracking-wider mb-3">Informasi Pelanggan</h4>
+                <h4 className="text-xs font-bold text-text-muted uppercase tracking-wider mb-3">Informasi Transaksi</h4>
                 <div className="bg-bg-main p-4 rounded-xl border border-border-subtle">
-                  <p className="text-sm font-bold text-text-primary">{selectedTransaction.customer?.name || "Umum"}</p>
                   <p className="text-[10px] font-medium text-text-muted mt-1">{new Date(selectedTransaction.createdAt).toLocaleString()}</p>
                 </div>
               </div>

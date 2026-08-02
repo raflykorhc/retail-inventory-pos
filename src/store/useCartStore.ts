@@ -15,7 +15,7 @@ interface CartItem {
   isBonus?: boolean;
 }
 
-export type ActiveModalType = 'history' | 'scanner' | 'printerSettings' | 'addCustomer' | 'success' | 'doModal' | null;
+export type ActiveModalType = 'history' | 'scanner' | 'printerSettings' | 'success' | 'doModal' | null;
 
 interface CartState {
   // Cart Items & Base Store

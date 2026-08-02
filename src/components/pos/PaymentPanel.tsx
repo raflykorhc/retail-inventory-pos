@@ -135,13 +135,6 @@ export const PaymentPanel: React.FC = () => {
 
       {/* Order Info & Quick Summary */}
       <div className="p-4 border-b border-border-subtle bg-brand-primary/5 space-y-3 flex-shrink-0">
-        <div className="flex justify-between items-start">
-          <div>
-            <span className="text-[9px] font-black text-text-muted uppercase tracking-wider">Pelanggan</span>
-            <h4 className="text-xs font-black text-text-primary mt-0.5">Umum</h4>
-          </div>
-        </div>
-
         <div className="pt-3 border-t border-border-subtle flex justify-between items-baseline">
           <span className="text-[10px] font-bold text-text-secondary uppercase tracking-wider">Total Pembayaran</span>
           <span className="text-xl font-black text-brand-primary">{formatCurrency(total)}</span>
@@ -303,7 +296,7 @@ export const PaymentPanel: React.FC = () => {
             </div>
             <p className="text-[10px] text-text-secondary leading-relaxed font-bold">
               {paymentMethod === "TRANSFER" 
-                ? "Pastikan dana sudah masuk ke rekening Bank Mandiri PD Sukses Bangunan sebelum mencetak struk transaksi."
+                ? "Pastikan dana sudah masuk ke rekening toko sebelum mencetak struk transaksi."
                 : "Pastikan kartu debit digesek dengan benar di mesin EDC dan transaksi dinyatakan berhasil (Approved) di struk EDC."}
             </p>
           </div>
