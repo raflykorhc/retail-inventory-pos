@@ -44,15 +44,13 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { formatCurrency, cn } from "../../lib/utils";
 import { useTheme } from "../../context/ThemeContext";
+import { useSettingsStore } from "../../store/useSettingsStore";
 
 interface DashboardData {
   metrics: {
     totalRevenue: number;
     revenueTrend: number;
     totalHPP: number;
-    totalExpenses: number;
-    expensesTrend: number;
-    totalBadDebts: number;
     grossProfit: number;
     netProfit: number;
     netProfitTrend: number;
@@ -61,19 +59,16 @@ interface DashboardData {
   salesTrend: Array<{ date: string; amount: number; hpp: number }>;
   cashFlow: Array<{ date: string; inflow: number; outflow: number }>;
   topProducts: Array<{ name: string; sales: number; revenue: number }>;
-  topCustomers: Array<{ name: string; revenue: number; transactionCount: number }>;
-  expensesBreakdown: Array<{ category: string; amount: number }>;
+  topCashiers: Array<{ name: string; revenue: number; transactionCount: number }>;
   insights: {
     lowStock: Array<{ name: string; stock: number; minStock: number }>;
     lowStockCount: number;
-    dueDebts: Array<{ customer: string; amount: number; dueDate: string }>;
-    dueDebtsCount: number;
-    pendingDeliveries: number;
   };
 }
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const settings = useSettingsStore(state => state.settings);
   const [dateRange, setDateRange] = useState("this_month");
   
   const [customStartDate, setCustomStartDate] = useState(() => {
@@ -157,7 +152,7 @@ export default function DashboardPage() {
     // Helper to create sheet with header
     const createSheetWithHeader = (title: string, headers: string[], body: any[][]) => {
       const aoa = [
-        ["PD SUKSES BANGUNAN"],
+        [settings.shopName],
         [title],
         [`Periode: ${periodLabel}`],
         [`Dicetak pada: ${printDate}`],
@@ -172,8 +167,6 @@ export default function DashboardPage() {
     const summaryBody = [
       ["Total Pendapatan", data.metrics.totalRevenue],
       ["Total HPP", data.metrics.totalHPP],
-      ["Total Pengeluaran", data.metrics.totalExpenses],
-      ["Piutang Macet", data.metrics.totalBadDebts],
       ["Laba Kotor", data.metrics.grossProfit],
       ["Laba Bersih", data.metrics.netProfit],
       ["Margin Keuntungan (%)", data.metrics.profitMargin.toFixed(2) + "%"]
@@ -184,24 +177,19 @@ export default function DashboardPage() {
     const productsBody = data.topProducts.map(p => [p.name, p.sales, p.revenue]);
     const wsProducts = createSheetWithHeader("PRODUK TERLARIS", ["Nama Produk", "Jumlah Terjual", "Total Omset"], productsBody);
 
-    // 3. Top Customers Sheet
-    const customersBody = data.topCustomers.map(c => [c.name, c.transactionCount, c.revenue]);
-    const wsCustomers = createSheetWithHeader("PELANGGAN TERATAS", ["Nama Pelanggan", "Jumlah Transaksi", "Total Belanja"], customersBody);
+    // 3. Top Cashiers Sheet
+    const cashiersBody = data.topCashiers.map(c => [c.name, c.transactionCount, c.revenue]);
+    const wsCashiers = createSheetWithHeader("KASIR TERATAS", ["Nama Kasir", "Jumlah Transaksi", "Total Omset"], cashiersBody);
 
     // 4. Sales Trend Sheet
     const trendBody = data.salesTrend.map(t => [t.date, t.amount, t.hpp, t.amount - t.hpp]);
     const wsTrend = createSheetWithHeader("TREN PENJUALAN", ["Tanggal", "Penjualan", "HPP", "Laba"], trendBody);
 
-    // 5. Expenses Breakdown Sheet
-    const expensesBody = data.expensesBreakdown.map(e => [e.category, e.amount]);
-    const wsExpenses = createSheetWithHeader("DISTRIBUSI PENGELUARAN", ["Kategori", "Nominal"], expensesBody);
-
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, wsSummary, "Ringkasan Bisnis");
     XLSX.utils.book_append_sheet(wb, wsProducts, "Produk Terlaris");
-    XLSX.utils.book_append_sheet(wb, wsCustomers, "Pelanggan Teratas");
+    XLSX.utils.book_append_sheet(wb, wsCashiers, "Kasir Teratas");
     XLSX.utils.book_append_sheet(wb, wsTrend, "Tren Penjualan");
-    XLSX.utils.book_append_sheet(wb, wsExpenses, "Pengeluaran");
     
     XLSX.writeFile(wb, `Laporan_Analitik_Bisnis_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
@@ -236,19 +224,19 @@ export default function DashboardPage() {
       doc.setFontSize(22);
       doc.setTextColor(...blackColor);
       doc.setFont("helvetica", "bold");
-      doc.text("PD SUKSES BANGUNAN", 28, 22);
+      doc.text(settings.shopName, 28, 22);
     } catch (e) {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(24);
       doc.setTextColor(...blackColor);
-      doc.text("PD SUKSES BANGUNAN", 14, 22);
+      doc.text(settings.shopName, 14, 22);
     }
     
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     doc.setTextColor(100);
-    doc.text("Jl. Citalang, Kec. Purwakarta, depan Perumahan Grha Citalang", 14, 30);
-    doc.text("Email: pdsuksesbngunan@gmail.com | Telp: +62 899-3124-264", 14, 35);
+    doc.text(settings.shopAddress, 14, 30);
+    doc.text(`Email: ${settings.shopEmail} | Telp: ${settings.shopPhone}`, 14, 35);
     
     // Divider Line
     doc.setDrawColor(15, 74, 138);
@@ -276,7 +264,6 @@ export default function DashboardPage() {
     const metricsData = [
       ["Total Pendapatan", formatCurrency(data.metrics.totalRevenue)],
       ["Total HPP", formatCurrency(data.metrics.totalHPP)],
-      ["Total Pengeluaran", formatCurrency(data.metrics.totalExpenses)],
       ["Laba Bersih", formatCurrency(data.metrics.netProfit)],
       ["Margin Keuntungan", `${data.metrics.profitMargin.toFixed(2)}%`]
     ];
@@ -366,7 +353,7 @@ export default function DashboardPage() {
       doc.setFontSize(8);
       doc.setTextColor(...secondaryColor);
       doc.text(
-        `Dicetak oleh Sistem POS PD Sukses Bangunan - Halaman ${i} dari ${pageCount}`, 
+        `Dicetak oleh Sistem POS ${settings.shopName} - Halaman ${i} dari ${pageCount}`, 
         doc.internal.pageSize.width / 2, 
         doc.internal.pageSize.height - 10, 
         { align: "center" }
@@ -402,9 +389,6 @@ export default function DashboardPage() {
       totalRevenue: 125000000,
       revenueTrend: 12.5,
       totalHPP: 95000000,
-      totalExpenses: 8500000,
-      expensesTrend: -2.3,
-      totalBadDebts: 0,
       grossProfit: 30000000,
       netProfit: 21500000,
       netProfitTrend: 15.2,
@@ -435,17 +419,9 @@ export default function DashboardPage() {
       { name: "Pipa PVC Rucika 3 Inch", sales: 70, revenue: 3500000 },
       { name: "Cat Tembok Dulux 5kg", sales: 50, revenue: 5000000 }
     ],
-    topCustomers: [
-      { name: "Kontraktor Wijaya Karya", revenue: 45000000, transactionCount: 15 },
-      { name: "Toko Material Sukses Mandiri", revenue: 35000000, transactionCount: 12 },
-      { name: "Developer Graha Asri", revenue: 28000000, transactionCount: 8 },
-      { name: "PD Makmur Jaya", revenue: 20000000, transactionCount: 6 },
-      { name: "Heri Setiawan (Proyek Ruko)", revenue: 15000000, transactionCount: 5 }
-    ],
-    expensesBreakdown: [
-      { category: "Gaji Karyawan", amount: 4500000 },
-      { category: "Operasional Toko", amount: 2500000 },
-      { category: "Bensin & Logistik", amount: 1500000 }
+    topCashiers: [
+      { name: "Kasir 1", revenue: 45000000, transactionCount: 15 },
+      { name: "Kasir 2", revenue: 35000000, transactionCount: 12 },
     ],
     insights: {
       lowStock: [
@@ -454,12 +430,6 @@ export default function DashboardPage() {
         { name: "Semen Portland 50kg", stock: 8, minStock: 30 }
       ],
       lowStockCount: 3,
-      dueDebts: [
-        { customer: "Kontraktor Wijaya Karya", amount: 15000000, dueDate: "2026-06-20" },
-        { customer: "Developer Graha Asri", amount: 8000000, dueDate: "2026-06-25" }
-      ],
-      dueDebtsCount: 2,
-      pendingDeliveries: 3
     }
   };
 
@@ -468,8 +438,7 @@ export default function DashboardPage() {
   const salesTrend = activeData.salesTrend || [];
   const cashFlow = activeData.cashFlow || [];
   const topProducts = activeData.topProducts || [];
-  const topCustomers = activeData.topCustomers || [];
-  const expensesBreakdown = activeData.expensesBreakdown || [];
+  const topCashiers = activeData.topCashiers || [];
   const insights = activeData.insights;
 
   const formatTrend = (val: number | undefined) => {
@@ -588,7 +557,7 @@ export default function DashboardPage() {
       {/* Actionable Insights */}
       {insights && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
-          {(insights.lowStock.length > 0 || insights.dueDebts.length > 0 || insights.pendingDeliveries > 0) && (
+          {(insights.lowStock.length > 0) && (
             <div className="col-span-full mb-2">
               <h2 className="text-sm font-black text-text-primary uppercase tracking-widest flex items-center">
                 <AlertCircle className="w-4 h-4 mr-2 text-status-warning" />
@@ -611,41 +580,11 @@ export default function DashboardPage() {
               </div>
             </div>
           )}
-
-          {insights.dueDebtsCount > 0 && (
-            <div 
-              onClick={() => navigate("/debts", { state: { filter: "OVERDUE" } })}
-              className="p-4 bg-status-danger/10 border border-status-danger/20 rounded-2xl flex items-start space-x-3 cursor-pointer hover:bg-status-danger/20 transition-all"
-            >
-              <div className="p-2 bg-status-danger/20 rounded-[24px] text-status-danger mt-0.5">
-                <DollarSign className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-status-danger">Piutang Jatuh Tempo</h3>
-                <p className="text-xs text-status-danger/80 mt-1">{insights.dueDebtsCount} pelanggan memiliki tagihan jatuh tempo.</p>
-              </div>
-            </div>
-          )}
-
-          {insights.pendingDeliveries > 0 && (
-            <div 
-              onClick={() => navigate("/delivery", { state: { openAntrean: true } })}
-              className="p-4 bg-brand-primary/10 border border-brand-primary/20 rounded-2xl flex items-start space-x-3 cursor-pointer hover:bg-brand-primary/20 transition-all"
-            >
-              <div className="p-2 bg-brand-primary/20 rounded-[24px] text-brand-primary mt-0.5">
-                <CheckCircle2 className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-brand-primary">Antrean Kirim</h3>
-                <p className="text-xs text-brand-primary/80 mt-1">{insights.pendingDeliveries} pesanan dalam antrean kirim.</p>
-              </div>
-            </div>
-          )}
         </div>
       )}
 
       {dashboardLayout.showMetrics && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 lg:gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <SummaryCard 
             title="Total Omset" 
             value={formatCurrency(metrics?.totalRevenue || 0)} 
@@ -664,26 +603,6 @@ export default function DashboardPage() {
             icon={<DollarSign className="w-6 h-6" />}
             color="green"
             sparklineData={salesTrend.map(d => d.amount - d.hpp)}
-            isLoading={isLoading}
-          />
-          <SummaryCard 
-            title="Total Pengeluaran" 
-            value={formatCurrency(metrics?.totalExpenses || 0)} 
-            trend={formatTrend(metrics?.expensesTrend)} 
-            isPositive={(metrics?.expensesTrend || 0) <= 0} // Less expenses is positive
-            icon={<TrendingDown className="w-6 h-6" />}
-            color="orange"
-            sparklineData={cashFlow.map(d => d.outflow)}
-            isLoading={isLoading}
-          />
-          <SummaryCard 
-            title="Piutang Macet" 
-            value={formatCurrency(metrics?.totalBadDebts || 0)} 
-            trend="N/A" 
-            isPositive={true} 
-            icon={<AlertCircle className="w-6 h-6" />}
-            color="red"
-            sparklineData={[]} 
             isLoading={isLoading}
           />
         </div>
@@ -852,107 +771,43 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Top Customers */}
+        {/* Top Cashiers */}
         <div className="p-8 lg:p-8 rounded-[32px] lg:rounded-[32px] border flex flex-col transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 delay-100 bg-bg-card border-border-default h-[400px]">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base font-black text-text-primary">Pelanggan Teratas</h3>
-              <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider mt-1">Berdasarkan Belanja</p>
+              <h3 className="text-base font-black text-text-primary">Kasir Teratas</h3>
+              <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider mt-1">Berdasarkan Omset</p>
             </div>
             <div className="p-2 bg-status-warning/10 text-status-warning rounded-[24px]">
               <TrendingUp className="w-5 h-5" />
             </div>
           </div>
           <div className="space-y-8 flex-1 overflow-y-auto custom-scrollbar pr-2">
-            {topCustomers.length === 0 ? (
-              <div className="text-center py-8 text-text-muted text-sm">Belum ada data pelanggan</div>
+            {topCashiers.length === 0 ? (
+              <div className="text-center py-8 text-text-muted text-sm">Belum ada data kasir</div>
             ) : (
-              topCustomers.map((customer, index) => (
+              topCashiers.map((cashier, index) => (
                 <div 
                   key={index} 
                   className="flex items-center justify-between group cursor-pointer p-1.5 rounded-[24px] hover:bg-bg-main transition-all duration-200"
-                  onClick={() => navigate("/customers")}
                 >
                   <div className="flex items-center space-x-3 overflow-hidden">
                     <div className="w-8 h-8 rounded-[24px] bg-bg-main border border-border-default flex items-center justify-center text-xs font-black text-text-secondary flex-shrink-0 group-hover:bg-status-warning group-hover:text-text-inverse group-hover:border-status-warning transition-colors">
                       {index + 1}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-bold text-text-primary truncate">{customer.name}</p>
-                      <p className="text-[10px] text-text-muted font-medium mt-0.5">{customer.transactionCount} Transaksi</p>
+                      <p className="text-sm font-bold text-text-primary truncate">{cashier.name}</p>
+                      <p className="text-[10px] text-text-muted font-medium mt-0.5">{cashier.transactionCount} Transaksi</p>
                     </div>
                   </div>
                   <div className="text-right pl-4 flex-shrink-0">
-                    <p className="text-sm font-black text-text-primary">{formatCurrency(customer.revenue)}</p>
+                    <p className="text-sm font-black text-text-primary">{formatCurrency(cashier.revenue)}</p>
                   </div>
                 </div>
               ))
             )}
           </div>
         </div>
-
-        {/* Expenses Breakdown */}
-        {dashboardLayout.showExpenses && (
-          <div className="p-8 lg:p-8 rounded-[32px] lg:rounded-[32px] border flex flex-col transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 delay-200 bg-bg-card border-border-default h-[400px]">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <h3 className="text-base font-black text-text-primary">Distribusi Pengeluaran</h3>
-                <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider mt-1">Berdasarkan Kategori</p>
-              </div>
-              <div className="p-2 bg-status-danger/10 text-status-danger rounded-[24px]">
-                <PieChartIcon className="w-5 h-5" />
-              </div>
-            </div>
-            <div className="flex-1 min-h-[150px] relative">
-              {expensesBreakdown.length === 0 ? (
-                <div className="absolute inset-0 flex items-center justify-center text-text-muted text-sm">Belum ada data pengeluaran</div>
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={expensesBreakdown}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={50}
-                      outerRadius={70}
-                      paddingAngle={5}
-                      dataKey="amount"
-                      nameKey="category"
-                      stroke="none"
-                    >
-                      {expensesBreakdown.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip cursor={false} 
-                      formatter={(value: number) => formatCurrency(value)}
-                      contentStyle={{ 
-                        borderRadius: '16px', 
-                        border: 'none', 
-                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
-                        backgroundColor: "var(--bg-modal)",
-                        color: "var(--color-text-primary)"
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-            {expensesBreakdown.length > 0 && (
-              <div className="mt-4 space-y-2 overflow-y-auto custom-scrollbar max-h-[100px]">
-                {expensesBreakdown.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between text-xs">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}></div>
-                      <span className="text-text-secondary font-medium">{item.category}</span>
-                    </div>
-                    <span className="font-bold text-text-primary">{formatCurrency(item.amount)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </div>
     </phantom-ui>

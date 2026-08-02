@@ -41,18 +41,9 @@ export const UserSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
-export const CustomerSchema = z.object({
-  name: z.string().min(1, "Nama pelanggan wajib diisi"),
-  phone: z.string().min(1, "Nomor telepon wajib diisi"),
-  email: z.string().email("Format email tidak valid").optional().or(z.literal("")),
-  address: z.string().optional(),
-  isContractor: z.boolean().default(false),
-  creditLimit: z.coerce.number().min(0, "Limit kredit harus positif").optional(),
-  notes: z.string().optional(),
-});
+
 
 export type ProductFormValues = z.infer<typeof ProductSchema>;
 export type GenericFormValues = z.infer<typeof GenericSchema>;
 export type SupplierFormValues = z.infer<typeof SupplierSchema>;
 export type UserFormValues = z.infer<typeof UserSchema>;
-export type CustomerFormValues = z.infer<typeof CustomerSchema>;

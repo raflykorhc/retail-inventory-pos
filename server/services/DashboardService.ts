@@ -209,7 +209,7 @@ export class DashboardService {
       cashierSalesMap[cashierId].revenue += Number(sale.totalAmount);
       cashierSalesMap[cashierId].transactionCount += 1;
     });
-    const topCustomers = Object.values(cashierSalesMap).sort((a, b) => b.revenue - a.revenue).slice(0, 5); // using topCustomers field for UI compatibility
+    const topCashiers = Object.values(cashierSalesMap).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
 
     // --- Actionable Insights ---
     const lowStockProducts = await prisma.product.findMany({
@@ -227,9 +227,6 @@ export class DashboardService {
         totalRevenue: currentRevenue,
         revenueTrend: calcTrend(currentRevenue, prevRevenue),
         totalHPP: currentHPP,
-        totalExpenses: 0,
-        expensesTrend: 0,
-        totalBadDebts: 0,
         grossProfit: currentGrossProfit,
         netProfit: currentNetProfit,
         netProfitTrend: calcTrend(currentNetProfit, prevNetProfit),
@@ -238,14 +235,10 @@ export class DashboardService {
       salesTrend,
       cashFlow,
       topProducts,
-      topCustomers,
-      expensesBreakdown: [],
+      topCashiers,
       insights: {
         lowStock: lowStockProducts,
         lowStockCount,
-        dueDebts: [],
-        dueDebtsCount: 0,
-        pendingDeliveries: 0
       }
     };
 

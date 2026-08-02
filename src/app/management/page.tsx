@@ -27,16 +27,15 @@ import { CategoryTable } from "./components/CategoryTable";
 import { UnitTable } from "./components/UnitTable";
 import { SupplierTable } from "./components/SupplierTable";
 import { UserTable } from "./components/UserTable";
-import { CustomerTable } from "./components/CustomerTable";
 import { QRPrintManager } from "../../components/QRPrintManager";
-import { ProductModal, GenericModal, SupplierModal, UserModal, CustomerModal, DeleteModal } from "./components/ManagementModals";
-import { ProductFormValues, GenericFormValues, SupplierFormValues, UserFormValues, CustomerFormValues } from "./schemas";
+import { ProductModal, GenericModal, SupplierModal, UserModal, DeleteModal } from "./components/ManagementModals";
+import { ProductFormValues, GenericFormValues, SupplierFormValues, UserFormValues } from "./schemas";
 import { Can } from "../../components/auth/Can";
 import InventoryOptimizationPanel from "./components/InventoryOptimizationPanel";
 
 import { useAuthStore } from "../../store/useAuthStore";
 
-type Tab = "barang" | "kategori" | "satuan" | "supplier" | "user" | "pelanggan" | "optimasi";
+type Tab = "barang" | "kategori" | "satuan" | "supplier" | "user" | "optimasi";
 
 export default function ManagementPage() {
   const { user } = useAuthStore();
@@ -47,7 +46,6 @@ export default function ManagementPage() {
   const [units, setUnits] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
-  const [customers, setCustomers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const placeholderItems = useMemo(() => [
@@ -75,17 +73,11 @@ export default function ManagementPage() {
     { id: "2", fullName: "Staff Toko A", username: "staffa", role: "CASHIER", email: "staffa@example.com" }
   ], []);
 
-  const placeholderCustomers = useMemo(() => [
-    { id: "1", name: "Pelanggan A", phone: "081234", email: "pelA@example.com", tier: "GOLD" },
-    { id: "2", name: "Pelanggan B", phone: "089876", email: "pelB@example.com", tier: "SILVER" }
-  ], []);
-
   const activeItems = isLoading ? placeholderItems : items;
   const activeCategories = isLoading ? placeholderCategories : categories;
   const activeUnits = isLoading ? placeholderUnits : units;
   const activeSuppliers = isLoading ? placeholderSuppliers : suppliers;
   const activeUsers = isLoading ? placeholderUsers : users;
-  const activeCustomers = isLoading ? placeholderCustomers : customers;
   
   // UI States
   const [searchQuery, setSearchQuery] = useState("");
@@ -126,7 +118,7 @@ export default function ManagementPage() {
   const fetchAllData = async () => {
     setIsLoading(true);
     try {
-      const [prodRes, catRes, unitRes, suppRes, userRes, custRes] = await Promise.all([
+      const [prodRes, catRes, unitRes, suppRes, userRes] = await Promise.all([
         axiosClient.get("/products"),
         axiosClient.get("/categories"),
         axiosClient.get("/units"),
@@ -134,15 +126,13 @@ export default function ManagementPage() {
         // Only fetch users if the user has the right role to avoid 403 error
         (user?.role === "ADMIN" || user?.role === "MANAGER") 
           ? axiosClient.get("/auth/users") 
-          : Promise.resolve({ data: [] }),
-        axiosClient.get("/customers")
+          : Promise.resolve({ data: [] })
       ]);
       setItems(prodRes.data || []);
       setCategories(catRes.data || []);
       setUnits(unitRes.data || []);
       setSuppliers(suppRes.data || []);
       setUsers(userRes.data || []);
-      setCustomers(custRes.data || []);
     } catch (error) {
       console.error("Failed to fetch data:", error);
       toast.error("Gagal Memuat Data", { description: "Terjadi kesalahan saat mengambil data master." });
@@ -153,7 +143,7 @@ export default function ManagementPage() {
 
   // Memoized Filtering Logic
   const filteredData = useMemo(() => {
-    const source = activeTab === "barang" ? activeItems : activeTab === "kategori" ? activeCategories : activeTab === "supplier" ? activeSuppliers : activeTab === "user" ? activeUsers : activeTab === "pelanggan" ? activeCustomers : activeUnits;
+    const source = activeTab === "barang" ? activeItems : activeTab === "kategori" ? activeCategories : activeTab === "supplier" ? activeSuppliers : activeTab === "user" ? activeUsers : activeUnits;
     if (!Array.isArray(source)) return [];
     
     const query = searchQuery.toLowerCase();
@@ -176,7 +166,7 @@ export default function ManagementPage() {
         matchesSearch = matchesSearch || codeMatch || descMatch;
       }
       
-      if (activeTab === "supplier" || activeTab === "pelanggan") {
+      if (activeTab === "supplier") {
         const phoneMatch = (i.phone || "")?.toLowerCase().includes(query);
         const contactMatch = (i.contact || "")?.toLowerCase().includes(query);
         matchesSearch = matchesSearch || phoneMatch || contactMatch;
@@ -197,7 +187,7 @@ export default function ManagementPage() {
 
       return matchesSearch && matchesCategory && matchesStock;
     });
-  }, [activeItems, activeCategories, activeUnits, activeSuppliers, activeUsers, activeCustomers, activeTab, searchQuery, categoryFilter, stockFilter]);
+  }, [activeItems, activeCategories, activeUnits, activeSuppliers, activeUsers, activeTab, searchQuery, categoryFilter, stockFilter]);
 
   const totalItems = filteredData.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
@@ -212,11 +202,11 @@ export default function ManagementPage() {
   // Handlers
   const handleOpenModal = (item: any = null) => {
     setEditingItem(item);
-    setModalType(activeTab === "barang" ? "product" : activeTab === "supplier" ? "supplier" : activeTab === "user" ? "user" : activeTab === "pelanggan" ? "customer" : "generic");
+    setModalType(activeTab === "barang" ? "product" : activeTab === "supplier" ? "supplier" : activeTab === "user" ? "user" : "generic");
   };
 
-  const handleSubmit = async (data: ProductFormValues | GenericFormValues | SupplierFormValues | UserFormValues | CustomerFormValues) => {
-    const endpoint = activeTab === "barang" ? "/products" : activeTab === "kategori" ? "/categories" : activeTab === "supplier" ? "/suppliers" : activeTab === "pelanggan" ? "/customers" : activeTab === "user" ? (editingItem ? "/auth/users" : "/auth/register") : "/units";
+  const handleSubmit = async (data: ProductFormValues | GenericFormValues | SupplierFormValues | UserFormValues) => {
+    const endpoint = activeTab === "barang" ? "/products" : activeTab === "kategori" ? "/categories" : activeTab === "supplier" ? "/suppliers" : activeTab === "user" ? (editingItem ? "/auth/users" : "/auth/register") : "/units";
     const url = editingItem ? `${endpoint}/${editingItem.id}` : endpoint;
 
     const promise = editingItem ? axiosClient.put(url, data) : axiosClient.post(url, data);
@@ -234,7 +224,7 @@ export default function ManagementPage() {
 
   const handleDelete = async () => {
     if (!deleteConfirm) return;
-    const endpoint = activeTab === "barang" ? "/products" : activeTab === "kategori" ? "/categories" : activeTab === "supplier" ? "/suppliers" : activeTab === "pelanggan" ? "/customers" : activeTab === "user" ? "/auth/users" : "/units";
+    const endpoint = activeTab === "barang" ? "/products" : activeTab === "kategori" ? "/categories" : activeTab === "supplier" ? "/suppliers" : activeTab === "user" ? "/auth/users" : "/units";
     const promise = axiosClient.delete(`${endpoint}/${deleteConfirm.id}`);
 
     toast.promise(promise, {
@@ -251,7 +241,7 @@ export default function ManagementPage() {
   const handleBulkDelete = async () => {
     if (selectedItems.length === 0) return;
     
-    const endpoint = activeTab === "kategori" ? "/categories" : activeTab === "supplier" ? "/suppliers" : activeTab === "pelanggan" ? "/customers" : "/units";
+    const endpoint = activeTab === "kategori" ? "/categories" : activeTab === "supplier" ? "/suppliers" : "/units";
     const promise = (activeTab === "barang" 
       ? axiosClient.post("/products/bulk-delete", { ids: selectedItems })
       : Promise.all(selectedItems.map(id => axiosClient.delete(`${endpoint}/${id}`)))) as Promise<any>;
@@ -302,16 +292,6 @@ export default function ManagementPage() {
           'Alamat': 'Jl. Contoh No. 123',
           'Email': 'supplier@example.com'
         }];
-      } else if (activeTab === "pelanggan") {
-        templateData = [{
-          'Nama Pelanggan': 'Budi Santoso',
-          'Nomor Telepon': '08123456789',
-          'Email': 'budi@example.com',
-          'Alamat': 'Jl. Contoh No. 123',
-          'Kontraktor': 'Ya',
-          'Limit Kredit': 5000000,
-          'Catatan': 'Catatan contoh'
-        }];
       } else {
         templateData = [{ 'Nama Satuan': 'Contoh Satuan' }];
       }
@@ -356,7 +336,6 @@ export default function ManagementPage() {
               activeTab === "barang" ? "/products" : 
               activeTab === "kategori" ? "/categories" : 
               activeTab === "supplier" ? "/suppliers" : 
-              activeTab === "pelanggan" ? "/customers" : 
               activeTab === "user" ? "/auth/register" :
               "/units";
             
@@ -450,23 +429,6 @@ export default function ManagementPage() {
                     address: getRowValue(row, 'Alamat') ? String(getRowValue(row, 'Alamat')).trim() : "",
                     email: getRowValue(row, 'Email') ? String(getRowValue(row, 'Email')).trim() : ""
                   };
-                } else if (activeTab === "pelanggan") {
-                  const rawName = getRowValue(row, 'Nama Pelanggan');
-                  if (!rawName) {
-                    skippedCount++;
-                    continue;
-                  }
-
-                  const contractorVal = getRowValue(row, 'Kontraktor') || '';
-                  payload = {
-                    name: String(rawName).trim(),
-                    phone: getRowValue(row, 'Nomor Telepon') ? String(getRowValue(row, 'Nomor Telepon')).trim() : "",
-                    email: getRowValue(row, 'Email') ? String(getRowValue(row, 'Email')).trim() : "",
-                    address: getRowValue(row, 'Alamat') ? String(getRowValue(row, 'Alamat')).trim() : "",
-                    isContractor: String(contractorVal).toLowerCase() === 'ya',
-                    creditLimit: Number(getRowValue(row, 'Limit Kredit')) || 0,
-                    notes: getRowValue(row, 'Catatan') ? String(getRowValue(row, 'Catatan')).trim() : ""
-                  };
                 } else {
                   const nameKey = activeTab === "kategori" ? "Nama Kategori" : "Nama Satuan";
                   const rawName = getRowValue(row, nameKey) || getRowValue(row, 'Nama');
@@ -541,7 +503,6 @@ export default function ManagementPage() {
         <SummaryCard title="Kategori" value={activeCategories.length} icon={<Tag className="w-4 h-4 lg:w-6 lg:h-6" />} color="green" className="shadow-sm border-border-default min-h-[70px] lg:min-h-[140px]" isLoading={isLoading} />
         <SummaryCard title="Satuan" value={activeUnits.length} icon={<Layers className="w-4 h-4 lg:w-6 lg:h-6" />} color="orange" className="shadow-sm border-border-default min-h-[70px] lg:min-h-[140px]" isLoading={isLoading} />
         <SummaryCard title="Pemasok" value={activeSuppliers.length} icon={<Truck className="w-4 h-4 lg:w-6 lg:h-6" />} color="blue" className="shadow-sm border-border-default min-h-[70px] lg:min-h-[140px]" isLoading={isLoading} />
-        <SummaryCard title="Pelanggan" value={activeCustomers.length} icon={<Users className="w-4 h-4 lg:w-6 lg:h-6" />} color="blue" className="shadow-sm border-border-default min-h-[70px] lg:min-h-[140px]" isLoading={isLoading} />
         <Can role={["ADMIN", "MANAGER"]}>
           <SummaryCard title="Pengguna" value={activeUsers.length} icon={<Users className="w-4 h-4 lg:w-6 lg:h-6" />} color="orange" className="shadow-sm border-border-default min-h-[70px] lg:min-h-[140px]" isLoading={isLoading} />
         </Can>
@@ -727,8 +688,8 @@ export default function ManagementPage() {
           {paginatedData.length === 0 ? (
             <div className="flex-1 flex items-center justify-center p-4">
               <EmptyState 
-                icon={activeTab === "barang" ? Package : activeTab === "kategori" ? Tag : activeTab === "supplier" ? Truck : activeTab === "user" ? Users : activeTab === "pelanggan" ? Users : Layers}
-                title={searchQuery ? "Data Tidak Ditemukan" : `Belum Ada Data ${activeTab === "barang" ? "Barang" : activeTab === "kategori" ? "Kategori" : activeTab === "supplier" ? "Supplier" : activeTab === "user" ? "Pengguna" : activeTab === "pelanggan" ? "Pelanggan" : "Satuan"}`}
+                icon={activeTab === "barang" ? Package : activeTab === "kategori" ? Tag : activeTab === "supplier" ? Truck : activeTab === "user" ? Users : Layers}
+                title={searchQuery ? "Data Tidak Ditemukan" : `Belum Ada Data ${activeTab === "barang" ? "Barang" : activeTab === "kategori" ? "Kategori" : activeTab === "supplier" ? "Supplier" : activeTab === "user" ? "Pengguna" : "Satuan"}`}
                 description={searchQuery 
                   ? `Tidak ada hasil untuk "${searchQuery}". Coba kata kunci lain.` 
                   : `Kelola daftar ${activeTab === "user" ? "pengguna sistem" : activeTab} toko Anda di sini. Mulai tambahkan data baru untuk melengkapi master data.`
@@ -755,10 +716,6 @@ export default function ManagementPage() {
               ) : activeTab === "user" ? (
                 <div className="scrollbar-default">
                   <UserTable items={paginatedData} selectedItems={selectedItems} isSelectionMode={isSelectionMode} toggleSelectItem={toggleSelectItem} onEdit={handleOpenModal} onDelete={setDeleteConfirm} />
-                </div>
-              ) : activeTab === "pelanggan" ? (
-                <div className="scrollbar-default">
-                  <CustomerTable items={paginatedData} selectedItems={selectedItems} isSelectionMode={isSelectionMode} toggleSelectItem={toggleSelectItem} onEdit={handleOpenModal} onDelete={setDeleteConfirm} />
                 </div>
               ) : activeTab === "optimasi" ? (
                 <InventoryOptimizationPanel />
@@ -851,10 +808,7 @@ export default function ManagementPage() {
         isOpen={modalType === "user"} onClose={() => setModalType(null)} 
         onSubmit={handleSubmit} editingItem={editingItem} 
       />
-      <CustomerModal 
-        isOpen={modalType === "customer"} onClose={() => setModalType(null)} 
-        onSubmit={handleSubmit} editingItem={editingItem} 
-      />
+
       <DeleteModal 
         isOpen={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} 
         onConfirm={handleDelete} itemName={deleteConfirm?.name || ""} 

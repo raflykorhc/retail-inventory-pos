@@ -4,7 +4,7 @@ import { cn } from "../../../lib/utils";
 import { Can } from "../../../components/auth/Can";
 import { Role } from "../../../store/useAuthStore";
 
-export type Tab = "barang" | "kategori" | "satuan" | "supplier" | "user" | "pelanggan" | "optimasi";
+export type Tab = "barang" | "kategori" | "satuan" | "supplier" | "user" | "optimasi";
 
 interface ManagementTabsProps {
   activeTab: Tab;
@@ -17,7 +17,7 @@ export const ManagementTabs: React.FC<ManagementTabsProps> = ({ activeTab, setAc
     { id: "kategori", label: "Kategori", icon: Tag },
     { id: "satuan", label: "Satuan", icon: Layers },
     { id: "supplier", label: "Pemasok", icon: Truck },
-    { id: "pelanggan", label: "Pelanggan", icon: Users },
+
     { id: "optimasi", label: "Optimasi Stok", icon: BarChart3, roles: ["ADMIN", "MANAGER"] as Role[] },
     { id: "user", label: "Pengguna", icon: Users, roles: ["ADMIN", "MANAGER"] as Role[] },
   ];

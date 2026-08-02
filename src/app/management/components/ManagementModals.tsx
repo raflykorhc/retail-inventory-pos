@@ -3,7 +3,7 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Package, Tag, Layers, Check, Trash2, Camera, Truck, Users, Plus, AlertTriangle, BarChart3 } from "lucide-react";
-import { ProductSchema, GenericSchema, SupplierSchema, UserSchema, CustomerSchema, type ProductFormValues, type GenericFormValues, type SupplierFormValues, type UserFormValues, type CustomerFormValues } from "../schemas";
+import { ProductSchema, GenericSchema, SupplierSchema, UserSchema, type ProductFormValues, type GenericFormValues, type SupplierFormValues, type UserFormValues } from "../schemas";
 import { cn } from "../../../lib/utils";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { AlertCircle } from "lucide-react";
@@ -702,111 +702,7 @@ export const SupplierModal: React.FC<{
   );
 };
 
-export const CustomerModal: React.FC<{
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (data: CustomerFormValues) => void;
-  editingItem: any;
-}> = ({ isOpen, onClose, onSubmit, editingItem }) => {
-  const { register, handleSubmit, reset, watch, formState: { errors, isSubmitting } } = useForm<CustomerFormValues>({
-    resolver: zodResolver(CustomerSchema) as any,
-  });
 
-  const isContractor = watch("isContractor");
-
-  useEffect(() => {
-    if (editingItem) {
-      reset({
-        name: editingItem.name,
-        phone: editingItem.phone || "",
-        email: editingItem.email || "",
-        address: editingItem.address || "",
-        isContractor: editingItem.isContractor || false,
-        creditLimit: editingItem.creditLimit || 0,
-        notes: editingItem.notes || "",
-      });
-    } else {
-      reset({ name: "", phone: "", email: "", address: "", isContractor: false, creditLimit: 0, notes: "" });
-    }
-  }, [editingItem, isOpen, reset]);
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title={editingItem ? "Edit Pelanggan" : "Tambah Pelanggan"} icon={<Users className="w-5 h-5" />}>
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
-        <div className="overflow-y-auto custom-scrollbar flex-1 p-4 lg:p-6 space-y-6">
-          <div className="space-y-2">
-          <label className="text-[10px] font-bold uppercase text-text-muted tracking-wider ml-1">Nama Pelanggan *</label>
-          <input 
-            {...register("name")} 
-            placeholder="Nama Lengkap" 
-            readOnly={editingItem?.name?.toLowerCase() === "umum"}
-            className={cn(
-              "w-full px-4 py-3 bg-bg-main border rounded-xl text-sm outline-none transition-all", 
-              errors.name ? "border-status-danger" : "border-border-default focus:ring-2 focus:ring-brand-primary",
-              editingItem?.name?.toLowerCase() === "umum" && "bg-bg-main/50 cursor-not-allowed text-text-muted"
-            )} 
-          />
-          {errors.name && <p className="text-[10px] text-status-danger font-bold ml-1">{errors.name.message}</p>}
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className="text-[10px] font-bold uppercase text-text-muted tracking-wider ml-1">Nomor Telepon *</label>
-            <input {...register("phone")} placeholder="08xxxxxxxx" className={cn("w-full px-4 py-3 bg-bg-main border rounded-xl text-sm outline-none transition-all", errors.phone ? "border-status-danger" : "border-border-default focus:ring-2 focus:ring-brand-primary")} />
-            {errors.phone && <p className="text-[10px] text-status-danger font-bold ml-1">{errors.phone.message}</p>}
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-bold uppercase text-text-muted tracking-wider ml-1">Email</label>
-            <input {...register("email")} placeholder="email@example.com" className={cn("w-full px-4 py-3 bg-bg-main border rounded-xl text-sm outline-none transition-all", errors.email ? "border-status-danger" : "border-border-default focus:ring-2 focus:ring-brand-primary")} />
-            {errors.email && <p className="text-[10px] text-status-danger font-bold ml-1">{errors.email.message}</p>}
-          </div>
-        </div>
-        <div className="space-y-2">
-          <label className="text-[10px] font-bold uppercase text-text-muted tracking-wider ml-1">Alamat</label>
-          <textarea {...register("address")} rows={2} className="w-full px-4 py-3 bg-bg-main border border-border-default rounded-xl text-sm focus:ring-2 focus:ring-brand-primary outline-none transition-all resize-none" placeholder="Alamat lengkap..." />
-        </div>
-        
-        <div className="p-4 bg-bg-main border border-border-default rounded-[32px] space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-bold text-text-primary">Status Kontraktor</p>
-              <p className="text-[10px] text-text-muted font-medium">Kontraktor memiliki akses fitur piutang</p>
-            </div>
-            <input 
-              type="checkbox" 
-              {...register("isContractor")} 
-              disabled={watch("name")?.toLowerCase() === "umum" || editingItem?.name?.toLowerCase() === "umum"}
-              className="w-5 h-5 rounded border-border-default text-brand-primary focus:ring-brand-primary disabled:opacity-50 disabled:cursor-not-allowed rounded-lg" 
-            />
-          </div>
-          {isContractor && (
-            <div className="pt-4 border-t border-border-subtle animate-in slide-in-from-top-2 duration-300">
-              <label className="text-[10px] font-bold uppercase text-text-muted tracking-wider ml-1">Limit Piutang (Rp)</label>
-              <div className="relative mt-1">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted text-sm font-bold">Rp</span>
-                <input type="number" {...register("creditLimit")} className="w-full pl-10 pr-4 py-3 bg-bg-card border border-border-default text-sm font-black focus:ring-2 focus:ring-brand-primary outline-none transition-all rounded-lg h-[44px]" placeholder="0" />
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-[10px] font-bold uppercase text-text-muted tracking-wider ml-1">Catatan</label>
-          <textarea {...register("notes")} rows={2} className="w-full px-4 py-3 bg-bg-main border border-border-default rounded-xl text-sm focus:ring-2 focus:ring-brand-primary outline-none transition-all resize-none" placeholder="Catatan tambahan..." />
-        </div>
-        </div>
-        <div className="p-4 lg:p-6 border-t border-border-subtle flex flex-col lg:flex-row-reverse gap-3 bg-bg-main/50 flex-shrink-0">
-          <button type="submit" disabled={isSubmitting} className="w-full lg:w-auto lg:flex-1 min-h-[44px] py-3 bg-brand-primary text-text-inverse rounded-xl font-bold text-sm shadow-lg shadow-brand-primary/20 hover:bg-brand-hover flex items-center justify-center space-x-2 disabled:opacity-50">
-            {isSubmitting ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check className="w-4 h-4" />}
-            <span>{editingItem ? "Update Data" : "Simpan Pelanggan"}</span>
-          </button>
-          <button type="button" onClick={onClose} className="w-full lg:w-auto lg:flex-1 min-h-[44px] py-3 border rounded-xl font-bold text-sm transition-all bg-bg-card border-border-default text-text-secondary hover:bg-bg-main">
-            Batal
-          </button>
-        </div>
-      </form>
-    </Modal>
-  );
-};
 
 export const DeleteModal: React.FC<{
   isOpen: boolean;
