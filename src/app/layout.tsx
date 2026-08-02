@@ -40,6 +40,7 @@ import { useCartStore } from "../store/useCartStore";
 import { BottomNav } from "../components/layout/BottomNav";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
+import { useSettingsStore } from "../store/useSettingsStore";
 
 interface SidebarItemProps {
   icon: React.ReactNode;
@@ -98,40 +99,14 @@ export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
 
   // Shop configurations & profile states
-  const [shopSettings, setShopSettings] = useState({
-    shopName: "PD SUKSES BANGUNAN",
-    shopAddress: "Jl. Citalang, Kec. Purwakarta, depan Perumahan Grha Citalang",
-    shopEmail: "pdsuksesbngunan@gmail.com",
-    shopPhone: "081234567890",
-    shopLogo: "/logo.png",
-    defaultSignee: "Umar Sajjaad"
-  });
+  const { settings: shopSettings, updateSettings: setShopSettings, fetchSettings } = useSettingsStore();
   const [isLoadingSettings, setIsLoadingSettings] = useState(false);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [settingsTab, setSettingsTab] = useState<"visual" | "shop">("visual");
 
-  // Fetch shop configurations on mount & when settings open
-  const fetchSettings = () => {
-    fetch("/api/settings")
-      .then((res) => res.json())
-      .then((data) => {
-        setShopSettings({
-          shopName: data.shopName || "PD SUKSES BANGUNAN",
-          shopAddress: data.shopAddress || "Jl. Citalang, Kec. Purwakarta, depan Perumahan Grha Citalang",
-          shopEmail: data.shopEmail || "pdsuksesbngunan@gmail.com",
-          shopPhone: data.shopPhone || "081234567890",
-          shopLogo: data.shopLogo || "/logo.png",
-          defaultSignee: data.defaultSignee || "Umar Sajjaad"
-        });
-      })
-      .catch((err) => {
-        console.error("Failed to load shop settings:", err);
-      });
-  };
-
   useEffect(() => {
     fetchSettings();
-  }, []);
+  }, [fetchSettings]);
 
   useEffect(() => {
     if (isSettingsOpen) {
@@ -148,7 +123,7 @@ export default function Layout({ children }: LayoutProps) {
       }
       const reader = new FileReader();
       reader.onloadend = () => {
-        setShopSettings(prev => ({ ...prev, shopLogo: reader.result as string }));
+        setShopSettings({ shopLogo: reader.result as string });
       };
       reader.readAsDataURL(file);
     }
@@ -164,14 +139,7 @@ export default function Layout({ children }: LayoutProps) {
       });
       if (res.ok) {
         const data = await res.json();
-        setShopSettings({
-          shopName: data.shopName || "",
-          shopAddress: data.shopAddress || "",
-          shopEmail: data.shopEmail || "",
-          shopPhone: data.shopPhone || "",
-          shopLogo: data.shopLogo || "",
-          defaultSignee: data.defaultSignee || ""
-        });
+        setShopSettings(data);
         toast.success("Pengaturan Tersimpan", { description: "Profil & branding toko berhasil diperbarui." });
         setIsSettingsOpen(false);
       } else {
@@ -196,15 +164,9 @@ export default function Layout({ children }: LayoutProps) {
       case "/": return "Kasir (POS)";
       case "/inventory": return "Manajemen Stok";
       case "/inventory/stock-in": return "Stok Masuk";
-      case "/customers": return "Pelanggan";
-      case "/expenses": return "Pengeluaran Operasional";
-      case "/debts": return "Piutang & Hutang";
-      case "/delivery": return "Pengiriman";
       case "/dashboard": return "Dashboard Analitik";
       case "/management": return "Manajemen Database";
       case "/reports": return "Laporan";
-      case "/returns": return "Pengembalian Barang";
-      case "/projects": return "Manajemen Proyek";
       default: return "";
     }
   };
@@ -292,18 +254,24 @@ export default function Layout({ children }: LayoutProps) {
         <div className={cn("p-4 lg:p-6 flex items-center", isSidebarCollapsed ? "justify-center flex-col gap-4" : "justify-between")}>
           <div className="flex items-center space-x-2 overflow-hidden">
             <div className="w-10 h-10 rounded-[24px] flex items-center justify-center flex-shrink-0 overflow-hidden bg-bg-main border border-border-default">
-              <img 
-                src={shopSettings.shopLogo} 
-                alt="Logo" 
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  if (e.currentTarget.nextElementSibling) {
-                    e.currentTarget.nextElementSibling.classList.remove('hidden');
-                  }
-                }} 
-              />
-              <Package className="text-brand-primary w-6 h-6 hidden" />
+              {shopSettings.shopLogo ? (
+                <>
+                  <img 
+                    src={shopSettings.shopLogo} 
+                    alt="Logo" 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      if (e.currentTarget.nextElementSibling) {
+                        e.currentTarget.nextElementSibling.classList.remove('hidden');
+                      }
+                    }} 
+                  />
+                  <Package className="text-brand-primary w-6 h-6 hidden" />
+                </>
+              ) : (
+                <Package className="text-brand-primary w-6 h-6" />
+              )}
             </div>
             {!isSidebarCollapsed && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="whitespace-nowrap overflow-hidden">
@@ -449,18 +417,24 @@ export default function Layout({ children }: LayoutProps) {
             <div className="hidden lg:flex items-center">
               <div className="flex items-center space-x-2 mr-6">
                 <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden bg-bg-main border border-border-default">
-                  <img 
-                    src={shopSettings.shopLogo} 
-                    alt="Logo" 
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                      if (e.currentTarget.nextElementSibling) {
-                        e.currentTarget.nextElementSibling.classList.remove('hidden');
-                      }
-                    }} 
-                  />
-                  <Package className="text-brand-primary w-4 h-4 hidden" />
+                  {shopSettings.shopLogo ? (
+                    <>
+                      <img 
+                        src={shopSettings.shopLogo} 
+                        alt="Logo" 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          if (e.currentTarget.nextElementSibling) {
+                            e.currentTarget.nextElementSibling.classList.remove('hidden');
+                          }
+                        }} 
+                      />
+                      <Package className="text-brand-primary w-4 h-4 hidden" />
+                    </>
+                  ) : (
+                    <Package className="text-brand-primary w-4 h-4" />
+                  )}
                 </div>
                 <h2 className="text-sm font-black text-text-primary uppercase tracking-tight truncate">
                   {shopSettings.shopName}
@@ -716,12 +690,23 @@ export default function Layout({ children }: LayoutProps) {
                           id="settings-logo-upload"
                           className="hidden rounded-lg" 
                         />
-                        <label 
-                          htmlFor="settings-logo-upload"
-                          className="px-3.5 py-2 bg-brand-primary text-text-inverse rounded-xl text-xs font-black uppercase tracking-wider inline-block cursor-pointer transition-all hover:bg-brand-hover shadow-sm"
-                        >
-                          Unggah Logo Baru
-                        </label>
+                        <div className="flex items-center space-x-2">
+                          <label 
+                            htmlFor="settings-logo-upload"
+                            className="px-3.5 py-2 bg-brand-primary text-text-inverse rounded-xl text-xs font-black uppercase tracking-wider inline-block cursor-pointer transition-all hover:bg-brand-hover shadow-sm"
+                          >
+                            Unggah Logo Baru
+                          </label>
+                          {shopSettings.shopLogo && (
+                            <button
+                              type="button"
+                              onClick={() => setShopSettings({ shopLogo: "" })}
+                              className="px-3.5 py-2 bg-status-danger/10 text-status-danger rounded-xl text-xs font-black uppercase tracking-wider inline-block cursor-pointer transition-all hover:bg-status-danger/20 shadow-sm border border-status-danger/20"
+                            >
+                              Hapus Logo
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -731,9 +716,9 @@ export default function Layout({ children }: LayoutProps) {
                       <input 
                         type="text" 
                         value={shopSettings.shopName}
-                        onChange={(e) => setShopSettings(prev => ({ ...prev, shopName: e.target.value }))}
+                        onChange={(e) => setShopSettings({ shopName: e.target.value })}
                         className="w-full px-3.5 py-2.5 border rounded-xl bg-bg-card border-border-default text-xs font-bold text-text-primary focus:outline-none focus:ring-1 focus:ring-brand-primary"
-                        placeholder="Contoh: PD SUKSES BANGUNAN"
+                        placeholder="Contoh: Nama Toko Anda"
                       />
                     </div>
 
@@ -743,7 +728,7 @@ export default function Layout({ children }: LayoutProps) {
                       <input 
                         type="text" 
                         value={shopSettings.shopPhone}
-                        onChange={(e) => setShopSettings(prev => ({ ...prev, shopPhone: e.target.value }))}
+                        onChange={(e) => setShopSettings({ shopPhone: e.target.value })}
                         className="w-full px-3.5 py-2.5 border rounded-xl bg-bg-card border-border-default text-xs font-bold text-text-primary focus:outline-none focus:ring-1 focus:ring-brand-primary"
                         placeholder="Contoh: 081234567890"
                       />
@@ -755,9 +740,9 @@ export default function Layout({ children }: LayoutProps) {
                       <input 
                         type="email" 
                         value={shopSettings.shopEmail}
-                        onChange={(e) => setShopSettings(prev => ({ ...prev, shopEmail: e.target.value }))}
+                        onChange={(e) => setShopSettings({ shopEmail: e.target.value })}
                         className="w-full px-3.5 py-2.5 border rounded-xl bg-bg-card border-border-default text-xs font-bold text-text-primary focus:outline-none focus:ring-1 focus:ring-brand-primary"
-                        placeholder="Contoh: pdsuksesbngunan@gmail.com"
+                        placeholder="Contoh: toko@email.com"
                       />
                     </div>
 
@@ -766,7 +751,7 @@ export default function Layout({ children }: LayoutProps) {
                       <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider block">Alamat Toko</label>
                       <textarea 
                         value={shopSettings.shopAddress}
-                        onChange={(e) => setShopSettings(prev => ({ ...prev, shopAddress: e.target.value }))}
+                        onChange={(e) => setShopSettings({ shopAddress: e.target.value })}
                         rows={3}
                         className="w-full px-3.5 py-2.5 border rounded-xl bg-bg-card border-border-default text-xs font-bold text-text-primary focus:outline-none focus:ring-1 focus:ring-brand-primary resize-none"
                         placeholder="Alamat lengkap toko..."
@@ -779,9 +764,21 @@ export default function Layout({ children }: LayoutProps) {
                       <input 
                         type="text" 
                         value={shopSettings.defaultSignee}
-                        onChange={(e) => setShopSettings(prev => ({ ...prev, defaultSignee: e.target.value }))}
+                        onChange={(e) => setShopSettings({ defaultSignee: e.target.value })}
                         className="w-full px-3.5 py-2.5 border rounded-xl bg-bg-card border-border-default text-xs font-bold text-text-primary focus:outline-none focus:ring-1 focus:ring-brand-primary"
-                        placeholder="Contoh: Umar Sajjaad"
+                        placeholder="Contoh: Budi Santoso"
+                      />
+                    </div>
+
+                    {/* Informasi Rekening */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider block">Informasi Rekening (Nota)</label>
+                      <input 
+                        type="text" 
+                        value={shopSettings.bankAccountInfo || ""}
+                        onChange={(e) => setShopSettings({ bankAccountInfo: e.target.value })}
+                        className="w-full px-3.5 py-2.5 border rounded-xl bg-bg-card border-border-default text-xs font-bold text-text-primary focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                        placeholder="Contoh: BCA 123456789 A/N: Pemilik Toko"
                       />
                     </div>
                   </div>

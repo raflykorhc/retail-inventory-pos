@@ -22,6 +22,7 @@ import {
 import { useNavigate, useLocation } from "react-router-dom";
 import { authService } from "../../services/authService";
 import { useAuthStore } from "../../store/useAuthStore";
+import { useSettingsStore } from "../../store/useSettingsStore";
 import { cn } from "../../lib/utils";
 
 const loginSchema = z.object({
@@ -36,8 +37,13 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { setAuth, isAuthenticated } = useAuthStore();
+  const { settings, fetchSettings } = useSettingsStore();
   const navigate = useNavigate();
   const location = useLocation();
+
+  React.useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
 
   const fromPath = location.state?.from?.pathname || "/";
   const fromSearch = location.state?.from?.search || location.search || "";
@@ -123,8 +129,8 @@ export default function LoginPage() {
             className="mb-10 inline-flex items-center justify-center w-32 h-32 rounded-[2.5rem] bg-white shadow-[0_20px_50px_rgba(0,0,0,0.3)] p-5 group hover:scale-105 transition-transform duration-500"
           >
             <img 
-              src="/logo.png" 
-              alt="PD Sukses Bangunan" 
+              src={settings.shopLogo || "/logo.png"} 
+              alt={settings.shopName} 
               className="w-full h-full object-contain"
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
@@ -140,7 +146,7 @@ export default function LoginPage() {
             transition={{ delay: 0.4, duration: 0.6 }}
           >
             <h1 className="text-5xl font-black text-white tracking-tighter mb-4 uppercase leading-none">
-              SUKSES <span className="text-brand-primary block mt-1">BANGUNAN</span>
+              {settings.shopName.split(" ")[0]} <span className="text-brand-primary block mt-1">{settings.shopName.split(" ").slice(1).join(" ")}</span>
             </h1>
             <div className="h-1.5 w-24 bg-brand-primary mx-auto rounded-full mb-8" />
             
@@ -196,10 +202,10 @@ export default function LoginPage() {
           {/* Mobile Logo */}
           <div className="mb-12 lg:hidden flex flex-col items-center">
             <div className="w-20 h-20 bg-white rounded-[32px] p-8 mb-4 border border-border-subtle">
-              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
+              <img src={settings.shopLogo || "/logo.png"} alt="Logo" className="w-full h-full object-contain" />
             </div>
             <h1 className="text-2xl font-black text-text-primary tracking-tighter uppercase">
-              SUKSES <span className="text-brand-primary">BANGUNAN</span>
+              {settings.shopName.split(" ")[0]} <span className="text-brand-primary">{settings.shopName.split(" ").slice(1).join(" ")}</span>
             </h1>
           </div>
 
@@ -330,7 +336,7 @@ export default function LoginPage() {
           <div className="mt-16 flex flex-col items-center space-y-8">
             <div className="h-px w-12 bg-border-default" />
             <p className="text-center text-[10px] font-black text-text-muted uppercase tracking-[0.2em]">
-              &copy; 2026 PD SUKSES BANGUNAN &bull; OPERATIONAL SYSTEM v2.4.2
+              &copy; {new Date().getFullYear()} {settings.shopName} &bull; OPERATIONAL SYSTEM v2.4.2
             </p>
           </div>
         </motion.div>
