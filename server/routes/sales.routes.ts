@@ -9,6 +9,7 @@ router.use(authMiddleware);
 
 router.get("/", asyncHandler(SalesController.getAll));
 router.get("/summary", asyncHandler(SalesController.getSummary));
+router.get("/:id", asyncHandler(SalesController.getById));
 router.post("/", asyncHandler(SalesController.create));
 router.delete("/:id", asyncHandler(SalesController.delete));
 

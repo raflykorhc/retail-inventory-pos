@@ -78,8 +78,14 @@ export class StockReportService {
     });
 
     let totalAssetValue = 0;
+    let outOfStockCount = 0;
     let lowStockCount = 0;
+    let overStockCount = 0;
+    let normalStockCount = 0;
     let totalItems = 0;
+    let reorderTotalUnits = 0;
+    let reorderTotalCost = 0;
+    const abcCounts = { A: 0, B: 0, C: 0, unclassified: 0 };
     const supplierValuationMap: Record<string, number> = {};
 
     products.forEach(p => {
@@ -98,9 +104,29 @@ export class StockReportService {
       const supplierName = p.supplier?.name || "Tanpa Pemasok";
       supplierValuationMap[supplierName] = (supplierValuationMap[supplierName] || 0) + productAssetValue;
       
-      if (p.stock <= p.minStock) {
+      const minStock = p.suggestedMin || p.minStock || 10;
+      if (p.stock <= 0) {
+        outOfStockCount++;
+      } else if (p.stock <= minStock) {
         lowStockCount++;
+      } else if (p.maxStock && p.maxStock > 0 && p.stock > p.maxStock) {
+        overStockCount++;
+      } else {
+        normalStockCount++;
       }
+
+      if (p.stock <= minStock) {
+        const targetMax = p.suggestedMax || p.maxStock || (minStock * 3);
+        const suggestedQty = Math.max(1, Math.ceil(targetMax - p.stock));
+        const unitCost = p.averageCost ? Number(p.averageCost) : ((p as any).prices?.[0]?.price ? Number((p as any).prices[0].price) : 0);
+        reorderTotalUnits += suggestedQty;
+        reorderTotalCost += suggestedQty * unitCost;
+      }
+
+      if (p.abcCategory === "A") abcCounts.A++;
+      else if (p.abcCategory === "B") abcCounts.B++;
+      else if (p.abcCategory === "C") abcCounts.C++;
+      else abcCounts.unclassified++;
     });
 
     const valuationBySupplier = Object.keys(supplierValuationMap).map(name => ({
@@ -108,11 +134,47 @@ export class StockReportService {
       value: supplierValuationMap[name]
     })).sort((a, b) => b.value - a.value);
 
+    // Get today's movement summary
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const todayLogs = await prisma.stockLog.findMany({
+      where: {
+        createdAt: { gte: todayStart }
+      },
+      select: {
+        type: true,
+        quantity: true
+      }
+    });
+
+    let todayIn = 0;
+    let todayOut = 0;
+    todayLogs.forEach(log => {
+      const q = Math.abs(Number(log.quantity) || 0);
+      if (log.type === "IN" || log.type === "PURCHASE" || log.type === "INITIAL" || log.type === "ADJUSTMENT_IN") {
+        todayIn += q;
+      } else {
+        todayOut += q;
+      }
+    });
+
     const result = {
       totalAssetValue,
       totalItems,
+      outOfStockCount,
       lowStockCount,
+      overStockCount,
+      normalStockCount,
       totalProducts: products.length,
+      reorderTotalUnits,
+      reorderTotalCost,
+      abcCounts,
+      todayMovements: {
+        inQty: todayIn,
+        outQty: todayOut,
+        totalLogs: todayLogs.length
+      },
       valuationBySupplier
     };
 
@@ -120,3 +182,4 @@ export class StockReportService {
     return result;
   }
 }
+

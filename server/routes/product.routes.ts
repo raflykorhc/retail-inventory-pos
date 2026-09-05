@@ -16,6 +16,7 @@ router.use(authMiddleware);
 router.get("/", asyncHandler(ProductController.getAll));
 router.post("/", roleMiddleware(["ADMIN", "MANAGER"]), asyncHandler(ProductController.create));
 router.put("/:id", roleMiddleware(["ADMIN", "MANAGER"]), asyncHandler(ProductController.update));
+router.post("/:id/preflight-scale-shift", roleMiddleware(["ADMIN", "MANAGER"]), asyncHandler(ProductController.preflightScaleShift));
 router.post("/bulk-delete", roleMiddleware(["ADMIN"]), asyncHandler(ProductController.bulkDelete));
 router.delete("/:id", roleMiddleware(["ADMIN"]), asyncHandler(ProductController.delete));
 

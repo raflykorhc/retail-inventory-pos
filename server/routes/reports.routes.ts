@@ -9,6 +9,7 @@ const router = express.Router();
 // Laporan Penjualan
 router.get("/sales", asyncHandler(SalesController.getAll));
 router.get("/sales/summary", asyncHandler(SalesController.getSummary));
+router.get("/sales/:id", asyncHandler(SalesController.getById));
 
 // Laporan Pembelian
 router.get("/purchases/summary", asyncHandler(getPurchaseSummary));

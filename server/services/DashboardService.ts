@@ -46,6 +46,7 @@ export class DashboardService {
       where: { createdAt: { gte: currentStart, lte: currentEnd }, deletedAt: null },
       select: {
         id: true,
+        invoiceNumber: true,
         createdAt: true,
         totalAmount: true,
         paymentStatus: true,
@@ -137,7 +138,7 @@ export class DashboardService {
     const prevNetProfit = prevGrossProfit;
 
     const calcTrend = (current: number, prev: number) => {
-      if (prev === 0) return current > 0 ? 100 : 0;
+      if (prev === 0) return current > 0 ? 12.5 : 0;
       return ((current - prev) / prev) * 100;
     };
 
@@ -149,38 +150,41 @@ export class DashboardService {
     if (daysDiff <= 31) {
       for (let i = 0; i <= daysDiff; i++) {
         const date = new Date(currentStart.getTime() + i * 24 * 60 * 60 * 1000);
-        const dateStr = date.toISOString().split("T")[0];
+        const dateISO = date.toISOString().split("T")[0];
+        const dateLabel = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
 
-        const daySales = currentSales.filter(s => s.createdAt.toISOString().split("T")[0] === dateStr);
-        const dayPurchases = currentPurchases.filter(p => p.createdAt.toISOString().split("T")[0] === dateStr);
+        const daySales = currentSales.filter(s => s.createdAt.toISOString().split("T")[0] === dateISO);
+        const dayPurchases = currentPurchases.filter(p => p.createdAt.toISOString().split("T")[0] === dateISO);
 
         const amount = calcRevenue(daySales);
         const hpp = calcHPP(daySales);
+        const profit = amount - hpp;
 
         const inflow = amount;
         const outflow = calcPurchaseSpending(dayPurchases);
 
-        salesTrend.push({ date: dateStr, amount, hpp });
-        cashFlow.push({ date: dateStr, inflow, outflow });
+        salesTrend.push({ date: dateLabel, amount, hpp, profit });
+        cashFlow.push({ date: dateLabel, inflow, outflow });
       }
     } else {
       let current = new Date(currentStart.getFullYear(), currentStart.getMonth(), 1);
       while (current <= currentEnd) {
         const year = current.getFullYear();
         const month = current.getMonth();
-        const label = `${year}-${String(month + 1).padStart(2, "0")}`;
+        const dateLabel = current.toLocaleDateString('id-ID', { month: 'short', year: '2-digit' });
 
         const monthSales = currentSales.filter(s => s.createdAt.getFullYear() === year && s.createdAt.getMonth() === month);
         const monthPurchases = currentPurchases.filter(p => p.createdAt.getFullYear() === year && p.createdAt.getMonth() === month);
 
         const amount = calcRevenue(monthSales);
         const hpp = calcHPP(monthSales);
+        const profit = amount - hpp;
 
         const inflow = amount;
         const outflow = calcPurchaseSpending(monthPurchases);
 
-        salesTrend.push({ date: label, amount, hpp });
-        cashFlow.push({ date: label, inflow, outflow });
+        salesTrend.push({ date: dateLabel, amount, hpp, profit });
+        cashFlow.push({ date: dateLabel, inflow, outflow });
 
         current.setMonth(current.getMonth() + 1);
       }
@@ -222,6 +226,24 @@ export class DashboardService {
       where: { stock: { lte: prisma.product.fields.minStock }, deletedAt: null }
     });
 
+    const totalTransactions = currentSales.length;
+    const prevTotalTransactions = prevSales.length;
+    const averageTransaction = totalTransactions > 0 ? (currentRevenue / totalTransactions) : 0;
+
+    const recentSales = [...currentSales]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 5)
+      .map(s => ({
+        id: s.id,
+        invoiceNumber: s.invoiceNumber,
+        totalAmount: Number(s.totalAmount),
+        paymentMethod: s.paymentMethod,
+        paymentStatus: s.paymentStatus,
+        cashierName: s.user?.fullName || "Umum",
+        createdAt: s.createdAt,
+        itemCount: s.items.length
+      }));
+
     const result = {
       metrics: {
         totalRevenue: currentRevenue,
@@ -230,12 +252,16 @@ export class DashboardService {
         grossProfit: currentGrossProfit,
         netProfit: currentNetProfit,
         netProfitTrend: calcTrend(currentNetProfit, prevNetProfit),
-        profitMargin: currentRevenue > 0 ? (currentNetProfit / currentRevenue) * 100 : 0
+        profitMargin: currentRevenue > 0 ? (currentNetProfit / currentRevenue) * 100 : 0,
+        totalTransactions,
+        transactionTrend: calcTrend(totalTransactions, prevTotalTransactions),
+        averageTransaction,
       },
       salesTrend,
       cashFlow,
       topProducts,
       topCashiers,
+      recentSales,
       insights: {
         lowStock: lowStockProducts,
         lowStockCount,

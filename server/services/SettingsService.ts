@@ -12,6 +12,11 @@ export interface ShopSettings {
   shopLogo: string;
   defaultSignee: string;
   bankAccountInfo: string;
+  abcLimitA: number;
+  abcLimitB: number;
+  defaultHoldingInterval: number;
+  defaultLeadTime: number;
+  defaultSafetyStockDays: number;
 }
 
 const DEFAULT_SETTINGS: ShopSettings = {
@@ -21,7 +26,12 @@ const DEFAULT_SETTINGS: ShopSettings = {
   shopPhone: "081234567890",
   shopLogo: "/logo.png",
   defaultSignee: "Umar Sajjaad",
-  bankAccountInfo: "BCA 2310576690 A/N: Umar Sajjaad"
+  bankAccountInfo: "BCA 2310576690 A/N: Umar Sajjaad",
+  abcLimitA: 80,
+  abcLimitB: 95,
+  defaultHoldingInterval: 14,
+  defaultLeadTime: 3,
+  defaultSafetyStockDays: 1
 };
 
 export class SettingsService {

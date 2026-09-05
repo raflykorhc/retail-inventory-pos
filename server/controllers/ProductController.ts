@@ -3,14 +3,16 @@ import { ProductService } from "../services/ProductService.ts";
 
 export class ProductController {
   static async getAll(req: Request, res: Response) {
-    const { page, limit, search, categoryId, supplierId, sort } = req.query;
+    const { page, limit, search, categoryId, supplierId, sort, abcCategory, stockStatus } = req.query;
     const products = await ProductService.getAll(
       page ? Number(page) : undefined,
       limit ? Number(limit) : undefined,
       search ? String(search) : undefined,
       categoryId ? String(categoryId) : undefined,
       supplierId ? String(supplierId) : undefined,
-      sort ? String(sort) : undefined
+      sort ? String(sort) : undefined,
+      abcCategory ? String(abcCategory) : undefined,
+      stockStatus ? String(stockStatus) : undefined
     );
     res.json(products);
   }
@@ -35,6 +37,13 @@ export class ProductController {
     res.json(product);
   }
 
+  static async preflightScaleShift(req: any, res: Response) {
+    const { id } = req.params;
+    const { prices } = req.body;
+    const result = await ProductService.preflightScaleShift(id, prices || []);
+    res.json(result);
+  }
+
   static async delete(req: any, res: Response) {
     const { id } = req.params;
     const userId = req.user?.id;
@@ -44,7 +53,7 @@ export class ProductController {
 
   static async addStock(req: any, res: Response) {
     const { id } = req.params;
-    const { quantity, cost, unitId, conversionFactor } = req.body;
+    const { quantity, cost, unitId, conversionFactor, price } = req.body;
     const userId = req.user?.id;
     const result = await ProductService.addStock(
       id, 
@@ -52,6 +61,7 @@ export class ProductController {
       cost ? Number(cost) : undefined,
       unitId ? String(unitId) : undefined,
       conversionFactor ? Number(conversionFactor) : undefined,
+      price !== undefined ? Number(price) : undefined,
       userId
     );
     res.json({ success: true, product: result });

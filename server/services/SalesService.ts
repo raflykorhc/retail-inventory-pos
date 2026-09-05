@@ -33,7 +33,9 @@ export class SalesService {
     }
     if (filters.search) {
       where.OR = [
-        { invoiceNumber: { contains: filters.search, mode: "insensitive" } }
+        { invoiceNumber: { contains: filters.search, mode: "insensitive" } },
+        { paymentMethod: { contains: filters.search, mode: "insensitive" } },
+        { notes: { contains: filters.search, mode: "insensitive" } }
       ];
     }
 
@@ -45,11 +47,32 @@ export class SalesService {
       prisma.sale.findMany({
         where,
         include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              username: true,
+              role: true
+            }
+          },
           items: { 
             include: { 
-              product: { include: { prices: true } }, 
+              product: { 
+                include: { 
+                  prices: {
+                    include: {
+                      unit: true
+                    }
+                  },
+                  category: true
+                } 
+              }, 
               unit: true,
-              batchAllocations: true 
+              batchAllocations: {
+                include: {
+                  batch: true
+                }
+              }
             } 
           },
         },
@@ -60,7 +83,20 @@ export class SalesService {
       prisma.sale.count({ where })
     ]);
 
-    return { items, total, page: page || 1, limit: limit || total };
+    const totalPages = limit ? Math.max(1, Math.ceil(total / limit)) : 1;
+    return { 
+      items, 
+      total, 
+      page: page || 1, 
+      limit: limit || total,
+      totalPages,
+      pagination: {
+        page: page || 1,
+        limit: limit || total,
+        total,
+        totalPages
+      }
+    };
   }
 
   static async create(data: {
@@ -214,6 +250,7 @@ export class SalesService {
               productId,
               unitId,
               quantity: totalQuantity,
+              conversionFactor: conversionFactor,
               priceAtSale: priceAtSale,
               isManualPrice: isManualPrice,
               isBonus: item.isBonus || false
@@ -282,6 +319,7 @@ export class SalesService {
         }
       }
 
+      summaryCache.clear();
       return sale;
     } catch (error) {
       if (error instanceof ApiError) throw error;
@@ -401,15 +439,21 @@ export class SalesService {
     const trendMap: Record<string, { date: string, revenue: number, profit: number }> = {};
 
     let totalRevenueFromSales = 0;
-    const paymentMethodsMap: Record<string, number> = {};
+    const paymentMethodsMap: Record<string, { amount: number; count: number }> = {};
 
     salesData.forEach(sale => {
       const revenue = Number(sale.totalAmount);
       totalRevenueFromSales += revenue;
       
-      const method = sale.paymentMethod || "CASH";
-      if (!paymentMethodsMap[method]) paymentMethodsMap[method] = 0;
-      paymentMethodsMap[method] += revenue;
+      const rawMethod = sale.paymentMethod || "CASH";
+      let methodKey = rawMethod;
+      if (rawMethod.startsWith("SPLIT")) methodKey = "SPLIT";
+
+      if (!paymentMethodsMap[methodKey]) {
+        paymentMethodsMap[methodKey] = { amount: 0, count: 0 };
+      }
+      paymentMethodsMap[methodKey].amount += revenue;
+      paymentMethodsMap[methodKey].count += 1;
       
       const dateStr = new Date(sale.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
       
@@ -482,11 +526,11 @@ export class SalesService {
     const allProductsProfit = Object.values(productSales)
       .sort((a, b) => b.profit - a.profit);
 
-    const formattedPaymentMethods = Object.entries(paymentMethodsMap).map(([method, amount]) => {
-      let displayName = method;
-      if (method.startsWith("SPLIT:")) displayName = "SPLIT";
-      return { method: displayName, amount };
-    });
+    const formattedPaymentMethods = Object.entries(paymentMethodsMap).map(([method, data]) => ({
+      method,
+      amount: data.amount,
+      count: data.count
+    }));
 
     const data = {
       totalRevenue,
@@ -508,13 +552,46 @@ export class SalesService {
   }
 
   static async getById(id: string) {
-    const sale = await prisma.sale.findUnique({
-      where: { id },
+    const sale = await prisma.sale.findFirst({
+      where: { 
+        OR: [
+          { id },
+          { invoiceNumber: id }
+        ],
+        deletedAt: null 
+      },
       include: {
-        items: { include: { product: true, unit: true } }
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            username: true,
+            role: true
+          }
+        },
+        items: { 
+          include: { 
+            product: { 
+              include: { 
+                prices: {
+                  include: {
+                    unit: true
+                  }
+                },
+                category: true
+              } 
+            }, 
+            unit: true,
+            batchAllocations: {
+              include: {
+                batch: true
+              }
+            }
+          } 
+        }
       }
     });
-    if (!sale || sale.deletedAt) throw new ApiError(404, "Transaksi tidak ditemukan");
+    if (!sale) throw new ApiError(404, "Transaksi tidak ditemukan");
     return sale;
   }
 

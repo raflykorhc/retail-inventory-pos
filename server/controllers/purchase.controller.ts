@@ -122,9 +122,28 @@ export const createPurchase = async (req: Request, res: Response) => {
         }
       }
 
+      let finalInvoiceNumber = invoiceNumber;
+      if (!finalInvoiceNumber || finalInvoiceNumber === "AUTO") {
+        const dateToUse = finalCreatedAt || new Date();
+        const startOfDay = new Date(dateToUse.getFullYear(), dateToUse.getMonth(), dateToUse.getDate(), 0, 0, 0, 0);
+        const endOfDay = new Date(dateToUse.getFullYear(), dateToUse.getMonth(), dateToUse.getDate(), 23, 59, 59, 999);
+        
+        const count = await tx.purchase.count({
+          where: {
+            createdAt: { gte: startOfDay, lte: endOfDay }
+          }
+        });
+        
+        const yy = String(dateToUse.getFullYear()).slice(-2);
+        const mm = String(dateToUse.getMonth() + 1).padStart(2, '0');
+        const dd = String(dateToUse.getDate()).padStart(2, '0');
+        
+        finalInvoiceNumber = `PO-${yy}${mm}${dd}-${String(count + 1).padStart(3, '0')}`;
+      }
+
       const purchase = await tx.purchase.create({
         data: {
-          invoiceNumber,
+          invoiceNumber: finalInvoiceNumber,
           supplierId,
           totalAmount,
           paymentStatus,
@@ -220,7 +239,7 @@ export const createPurchase = async (req: Request, res: Response) => {
             productId: item.productId,
             type: "IN",
             quantity: baseQuantity,
-            reason: `Purchase ${invoiceNumber}`,
+            reason: `Purchase ${finalInvoiceNumber}`,
             createdAt: purchase.createdAt
           }
         });

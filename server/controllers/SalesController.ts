@@ -13,7 +13,7 @@ export class SalesController {
       limit: req.query.limit ? Number(req.query.limit) : undefined,
       search: req.query.search as string,
     };
-    const result = await SalesService.getReport(filters);
+    const result = await SalesService.getAll(filters);
     res.json(result);
   }
 
@@ -35,6 +35,12 @@ export class SalesController {
       userId: req.user?.id
     });
     res.json(sale);
+  }
+
+  static async getById(req: Request, res: Response) {
+    const { id } = req.params;
+    const result = await SalesService.getById(id);
+    res.json(result);
   }
 
   static async delete(req: any, res: Response) {
