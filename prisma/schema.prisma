@@ -39,9 +39,12 @@ model Product {
 
   abcCategory  String? 
   leadTime     Int     @default(3) 
+  holdingInterval Int?
   maxStock     Float? 
   suggestedMin Float? 
   suggestedMax Float? 
+  warehouseCapacity Float?
+  safetyStockDays Int @default(1)
 
   cartItems     CartItem[]
   category      Category       @relation(fields: [categoryId], references: [id])
@@ -72,13 +75,15 @@ model ProductPrice {
 }
 
 model StockLog {
-  id        String   @id @default(cuid())
-  productId String
-  type      String
-  quantity  Float
-  reason    String?
-  createdAt DateTime @default(now())
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id           String   @id @default(cuid())
+  productId    String
+  type         String
+  quantity     Float
+  unitName     String?
+  unitQuantity Float?
+  reason       String?
+  createdAt    DateTime @default(now())
+  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId])
   @@index([createdAt])
@@ -115,6 +120,7 @@ model SaleItem {
   priceAtSale       Decimal
   isManualPrice     Boolean         @default(false)
   isBonus           Boolean         @default(false)
+  conversionFactor  Float           @default(1)
   product           Product         @relation(fields: [productId], references: [id])
   sale              Sale            @relation(fields: [saleId], references: [id], onDelete: Cascade)
   unit              Unit            @relation(fields: [unitId], references: [id])
@@ -137,6 +143,7 @@ model CartItem {
   price         Decimal? 
   discount      Decimal? @default(0) 
   quantity      Float
+  takenQuantity Float?
   isBonus       Boolean  @default(false)
   cart          Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
   product       Product  @relation(fields: [productId], references: [id])
