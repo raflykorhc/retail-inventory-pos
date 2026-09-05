@@ -1,0 +1,2672 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wireframe Antarmuka Sistem POS & Inventaris Retail - Dokumen TA</title>
+  <style>
+    :root {
+      --bg-main: #f1f5f9;
+      --bg-card: #ffffff;
+      --wire-border: #64748b;
+      --wire-border-dark: #000000;
+      --wire-text: #0f172a;
+      --wire-subtext: #475569;
+      --wire-placeholder: #e2e8f0;
+      --wire-accent: #0f172a;
+      --wire-pin-bg: #1e293b;
+      --wire-pin-text: #ffffff;
+      --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      height: 100vh;
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-family);
+      background-color: var(--bg-main);
+      color: var(--wire-text);
+      line-height: 1.3;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Control Bar */
+    .top-bar {
+      flex-shrink: 0;
+      background: #0f172a;
+      color: #fff;
+      padding: 6px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      z-index: 1000;
+    }
+
+    .top-bar-title {
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .top-bar-title span {
+      background: var(--wire-accent);
+      color: white;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .nav-btn {
+      background: #1e293b;
+      color: #94a3b8;
+      border: 1px solid #334155;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .nav-btn:hover {
+      background: #334155;
+      color: #fff;
+    }
+
+    .nav-btn.active {
+      background: var(--wire-accent);
+      color: #fff;
+      border-color: var(--wire-accent);
+    }
+
+    .action-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-action {
+      background: #334155;
+      color: #fff;
+      border: none;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+    }
+
+    .btn-action:hover {
+      background: #475569;
+    }
+
+    .btn-screenshot {
+      background: #334155;
+    }
+    .btn-screenshot:hover {
+      background: #1e293b;
+    }
+
+    body.screenshot-mode .top-bar {
+      display: none !important;
+    }
+
+    /* Container & Wrapper */
+    .container {
+      flex: 1;
+      min-height: 0;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .wireframe-view {
+      display: none;
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+      overflow: hidden;
+      height: 100%;
+      max-height: 100%;
+      flex-direction: column;
+    }
+
+    .wireframe-view.active {
+      display: flex;
+    }
+
+    /* Canvas Frame */
+    .wf-canvas {
+      padding: 0;
+      flex: 1;
+      min-height: 0;
+      background: transparent;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Wireframe UI Blocks & Helpers */
+    .wf-box {
+      border: 2px solid var(--wire-border-dark);
+      background: #ffffff;
+      border-radius: 6px;
+      position: relative;
+    }
+
+    .wf-dashed {
+      border: 2px dashed var(--wire-border);
+      background: #f8fafc;
+    }
+
+    .wf-placeholder-img {
+      background: #f1f5f9;
+      border: 2px dashed var(--wire-border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--wire-subtext);
+      font-size: 11px;
+      font-weight: 600;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .wf-placeholder-img::before {
+      content: '';
+      position: absolute;
+      width: 140%;
+      height: 1px;
+      background: #cbd5e1;
+      transform: rotate(25deg);
+    }
+
+    .wf-placeholder-img::after {
+      content: '';
+      position: absolute;
+      width: 140%;
+      height: 1px;
+      background: #cbd5e1;
+      transform: rotate(-25deg);
+    }
+
+    .wf-placeholder-text {
+      position: relative;
+      z-index: 2;
+      background: rgba(255,255,255,0.9);
+      padding: 1px 5px;
+      border-radius: 3px;
+      border: 1px solid #cbd5e1;
+    }
+
+    /* Annotation Pins */
+    .pin {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background: var(--wire-pin-bg);
+      color: var(--wire-pin-text);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 800;
+      z-index: 50;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.25);
+      border: 1.5px solid #fff;
+    }
+
+    .pin-top-left { top: -8px; left: -8px; }
+    .pin-top-right { top: -8px; right: -8px; }
+
+    /* Annotations Legend Table */
+    .annotations-card {
+      background: #f8fafc;
+      border-top: 2px solid var(--wire-border);
+      padding: 6px 12px;
+      flex-shrink: 0;
+    }
+
+    .annotations-title {
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--wire-text);
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .annotations-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 6px;
+    }
+
+    .annotation-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      background: #ffffff;
+      padding: 4px 8px;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+
+    .annotation-num {
+      background: #0f172a;
+      color: white;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .annotation-text strong {
+      display: block;
+      color: #0f172a;
+      font-size: 11px;
+      line-height: 1.2;
+    }
+
+    .annotation-text span {
+      color: #64748b;
+      font-size: 10.5px;
+      line-height: 1.2;
+    }
+
+    /* Common UI Elements */
+    .wf-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 12px;
+      border: 1.5px solid var(--wire-border-dark);
+      background: #ffffff;
+      font-weight: 700;
+      font-size: 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .wf-btn-primary {
+      background: #1e293b;
+      color: #ffffff;
+    }
+
+    .wf-btn-outline {
+      background: #ffffff;
+      color: #1e293b;
+    }
+
+    .wf-input {
+      width: 100%;
+      padding: 6px 10px;
+      border: 1.5px solid var(--wire-border-dark);
+      border-radius: 5px;
+      background: #ffffff;
+      font-size: 12px;
+      color: #334155;
+    }
+
+    .wf-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border: 1px solid var(--wire-border-dark);
+      border-radius: 4px;
+      font-size: 10.5px;
+      font-weight: 700;
+      background: #f1f5f9;
+    }
+
+    /* Grid & Flex Utilities */
+    .flex-row { display: flex; flex-direction: row; }
+    .flex-col { display: flex; flex-direction: column; }
+    .gap-2 { gap: 6px; }
+    .gap-3 { gap: 8px; }
+    .gap-4 { gap: 12px; }
+    .items-center { align-items: center; }
+    .justify-between { justify-content: space-between; }
+    .w-full { width: 100%; }
+
+    /* LAYOUT: APP SHELL (Sidebar + Header + Main) */
+    .app-shell {
+      display: grid;
+      grid-template-columns: 190px 1fr;
+      border: 2px solid var(--wire-border-dark);
+      height: 100%;
+      min-height: 0;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .app-sidebar {
+      background: #f8fafc;
+      border-right: 2px solid var(--wire-border-dark);
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .sidebar-brand {
+      font-weight: 800;
+      font-size: 13px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--wire-border-dark);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .sidebar-menu {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .menu-item {
+      padding: 6px 8px;
+      border: 1.5px solid var(--wire-border-dark);
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #ffffff;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .menu-item.active {
+      background: #0f172a;
+      color: #ffffff;
+    }
+
+    .app-main {
+      display: flex;
+      flex-direction: column;
+      background: #ffffff;
+      height: 100%;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .app-header {
+      padding: 8px 14px;
+      border-bottom: 2px solid var(--wire-border-dark);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #f8fafc;
+      flex-shrink: 0;
+    }
+
+    .app-body {
+      padding: 10px 12px;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* POS SPECIFIC LAYOUT */
+    .pos-grid {
+      display: grid;
+      grid-template-columns: 1fr 310px;
+      gap: 10px;
+      height: 100%;
+      min-height: 0;
+    }
+
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .product-card {
+      border: 1.5px solid var(--wire-border-dark);
+      border-radius: 10px;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .product-card-img {
+      width: 100%;
+      height: 145px;
+      background: #f8fafc;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-bottom: 1.5px solid var(--wire-border-dark);
+    }
+
+    .product-card-body {
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      justify-content: space-between;
+      min-height: 90px;
+    }
+
+    .cart-panel {
+      border: 1.5px solid var(--wire-border-dark);
+      border-radius: 5px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: #f8fafc;
+      height: 100%;
+      min-height: 0;
+    }
+
+    .cart-item {
+      border: 1.5px solid var(--wire-border-dark);
+      border-radius: 4px;
+      padding: 6px 8px;
+      background: #ffffff;
+      margin-bottom: 6px;
+    }
+
+    /* MODAL OVERLAY */
+    .modal-overlay {
+      position: relative;
+      border: 2px solid var(--wire-border-dark);
+      background: #ffffff;
+      border-radius: 8px;
+      max-width: 780px;
+      width: 100%;
+      margin: 0 auto;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      overflow: hidden;
+      height: 100%;
+      max-height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-header {
+      background: #0f172a;
+      color: #fff;
+      padding: 8px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 700;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+
+    .modal-body {
+      padding: 10px 14px;
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      gap: 12px;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    /* RECEIPT PREVIEW */
+    .receipt-box {
+      border: 1.5px dashed var(--wire-border-dark);
+      background: #fff;
+      padding: 8px 10px;
+      font-family: monospace;
+      font-size: 10px;
+      line-height: 1.25;
+    }
+
+    .receipt-header {
+      text-align: center;
+      border-bottom: 1px dashed var(--wire-border-dark);
+      padding-bottom: 4px;
+      margin-bottom: 6px;
+    }
+
+    /* TABLE WIREFRAME */
+    .wf-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 6px;
+      font-size: 11px;
+    }
+
+    .wf-table th, .wf-table td {
+      border: 1.5px solid var(--wire-border-dark);
+      padding: 5px 8px;
+      text-align: left;
+    }
+
+    .wf-table th {
+      background: #f1f5f9;
+      font-weight: 800;
+    }
+
+    /* DASHBOARD CARDS */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 10px;
+      flex-shrink: 0;
+    }
+
+    .kpi-card {
+      border: 1.5px solid var(--wire-border-dark);
+      border-radius: 5px;
+      padding: 8px 10px;
+      background: #ffffff;
+      position: relative;
+    }
+
+    .chart-container {
+      border: 1.5px solid var(--wire-border-dark);
+      border-radius: 5px;
+      padding: 10px;
+      height: 100%;
+      background: #ffffff;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .fake-chart-lines {
+      height: 110px;
+      border-left: 2px solid var(--wire-border-dark);
+      border-bottom: 2px solid var(--wire-border-dark);
+      position: relative;
+      margin-top: 6px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-around;
+      padding: 0 8px;
+    }
+
+    .chart-bar {
+      width: 24px;
+      background: #cbd5e1;
+      border: 1.5px solid var(--wire-border-dark);
+      border-bottom: none;
+    }
+
+    .chart-bar.highlight {
+      background: #1e293b;
+    }
+
+    .caption-ta {
+      text-align: center;
+      margin-top: 4px;
+      margin-bottom: 2px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #334155;
+      font-style: italic;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Control Bar -->
+  <div class="top-bar">
+    <div class="top-bar-title">
+      Wireframe TA <span>Retail POS</span>
+    </div>
+    <div class="action-controls">
+      <button class="btn-action btn-screenshot" onclick="toggleScreenshotMode()">
+        Mode Screenshot TA
+      </button>
+    </div>
+  </div>
+
+  <div class="container">
+
+    <!-- ==================== WIREFRAME 1: LOGIN ==================== -->
+    <div id="wf-login" class="wireframe-view active">
+      <div class="wf-canvas" style="display: flex; flex-direction: column; align-items: center; justify-content: center; background: #fafafa;">
+        <div style="max-width: 380px; width: 100%; position: relative; padding: 24px; background: #ffffff; border: 1.5px solid var(--wire-border-dark); border-radius: 8px;" class="wf-box">
+          
+          <div style="text-align: center; margin-bottom: 20px;">
+            <div style="font-weight: 900; font-size: 20px; color: #0f172a;">Selamat Datang</div>
+            <div style="font-size: 12px; color: var(--wire-subtext); margin-top: 4px;">Silakan masuk ke Retail Kecil Menengah</div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            <div>
+              <label style="font-size: 11.5px; font-weight: 700; display: block; margin-bottom: 4px; color: #0f172a;">Username / ID Karyawan</label>
+              <input type="text" class="wf-input" placeholder="Masukkan username" value="" style="font-size: 12px; border-color: #000;" readonly />
+            </div>
+
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <label style="font-size: 11.5px; font-weight: 700; color: #0f172a;">Kata Sandi</label>
+                <a href="#" onclick="return false;" style="color: var(--wire-subtext); font-size: 11px; text-decoration: none; font-weight: 600;">Lupa Password?</a>
+              </div>
+              <input type="password" class="wf-input" value="••••••••" style="font-size: 12px; border-color: #000;" readonly />
+            </div>
+
+            <div style="margin-top: 8px;">
+              <button class="wf-btn wf-btn-primary w-full" onclick="switchTab('wf-pos')" style="padding: 10px; font-size: 13px; background: #000000; border-color: #000000; font-weight: 700; color: #ffffff; cursor: pointer;">Masuk ke Sistem</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 14px; text-align: center; font-size: 11px; color: var(--wire-subtext);">
+          © 2026 Retail Kecil Menengah
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ==================== WIREFRAME 2: POS KASIR ==================== -->
+    <div id="wf-pos" class="wireframe-view">
+      <div class="wf-canvas">
+        <div class="app-shell">
+          <!-- Sidebar -->
+          <div class="app-sidebar">
+            <div>
+              <div class="sidebar-brand" onclick="switchTab('wf-pos')" style="display: flex; align-items: center; gap: 8px;">
+                <span>🏪</span> Retail Kecil Menengah
+              </div>
+              <div style="font-size: 10px; color: var(--wire-subtext); margin: 8px 0 4px 2px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Main Menu</div>
+              <div class="sidebar-menu">
+                <div class="menu-item active" onclick="switchTab('wf-pos')">
+                  <span>🛒</span> Point of Sale (POS)
+                </div>
+                <div class="menu-item" onclick="switchTab('wf-dashboard')">
+                  <span>🔲</span> Dashboard
+                </div>
+                <div class="menu-item" onclick="switchTab('wf-inventory')">
+                  <span>📦</span> Inventory
+                </div>
+                <div class="menu-item" onclick="switchTab('wf-reports')">
+                  <span>📄</span> Laporan
+                </div>
+              </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <div class="menu-item" onclick="switchTab('wf-pos')">
+                <span>⚙️</span> Pengaturan
+              </div>
+              <div style="font-size: 11px; padding: 8px; border: 1.5px solid var(--wire-border-dark); border-radius: 6px; background: #fff; display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <div style="width: 28px; height: 28px; border-radius: 50%; background: #0f172a; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 10px;">MT</div>
+                  <div>
+                    <strong style="font-size: 11px; display: block; line-height: 1.1;">Manager Toko</strong>
+                    <span style="color: var(--wire-subtext); font-size: 9.5px; font-weight: 700;">MANAGER</span>
+                  </div>
+                </div>
+                <span style="cursor: pointer; font-weight: 900; color: #64748b;">⋮</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main POS -->
+          <div class="app-main">
+            <!-- Header Bar -->
+            <div class="app-header" style="display: flex; justify-content: space-between; align-items: center;">
+              <div style="display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 14px;">
+                <span style="border: 1px solid var(--wire-border-dark); padding: 2px 6px; border-radius: 4px; font-size: 12px;">📖</span>
+                <span>POS</span>
+              </div>
+            </div>
+
+            <!-- Body -->
+            <div class="app-body">
+              <div class="pos-grid">
+                
+                <!-- Left: Catalog Area -->
+                <div style="display: flex; flex-direction: column; height: 100%; min-height: 0;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <h3 style="font-size: 15px; font-weight: 900; color: #0f172a;">Katalog Produk</h3>
+                    <span class="wf-badge" style="background: #f8fafc; color: #000; border-color: #000; font-size: 10px; font-weight: 700;">24 Produk</span>
+                  </div>
+
+                  <!-- Search Bar -->
+                  <div style="margin-bottom: 8px;">
+                    <input type="text" class="wf-input" placeholder="Cari nama barang atau barcode (Enter untuk auto-add)..." value="" readonly style="font-size: 12px; border-radius: 6px;" />
+                  </div>
+
+                  <!-- Category Pills -->
+                  <div style="display: flex; gap: 5px; margin-bottom: 12px; flex-wrap: wrap;">
+                    <button class="wf-btn wf-btn-primary" style="padding: 4px 10px; font-size: 10.5px; border-radius: 4px; font-weight: 700;">Semua</button>
+                    <button class="wf-btn wf-btn-outline" style="padding: 4px 10px; font-size: 10.5px; border-radius: 4px;">ASBES</button>
+                    <button class="wf-btn wf-btn-outline" style="padding: 4px 10px; font-size: 10.5px; border-radius: 4px;">ATAP</button>
+                    <button class="wf-btn wf-btn-outline" style="padding: 4px 10px; font-size: 10.5px; border-radius: 4px;">BAHAN ALAM</button>
+                    <button class="wf-btn wf-btn-outline" style="padding: 4px 10px; font-size: 10.5px; border-radius: 4px;">BAHAN KONTRUKSI</button>
+                    <button class="wf-btn wf-btn-outline" style="padding: 4px 10px; font-size: 10.5px; border-radius: 4px;">BAHAN PELENGKAP</button>
+                    <button class="wf-btn wf-btn-outline" style="padding: 4px 10px; font-size: 10.5px; border-radius: 4px;">BAHAN PEREKAT</button>
+                  </div>
+
+                  <!-- Product Cards Grid (4 Columns matching user screenshot - taller scrollable ratio) -->
+                  <div class="product-grid" style="grid-template-columns: repeat(4, 1fr); gap: 10px; overflow-y: auto; flex: 1; min-height: 0; padding-right: 4px;">
+
+                    <!-- Card 1 -->
+                    <div class="product-card">
+                      <div class="product-card-img">
+                        <div style="position: absolute; right: 8px; top: 8px; font-size: 9.5px; font-weight: 800; border: 1.5px solid var(--wire-border-dark); padding: 2px 7px; border-radius: 5px; background: #ffffff;">6 PCS</div>
+                        <span style="font-size: 28px; opacity: 0.4;">📦</span>
+                      </div>
+                      <div class="product-card-body">
+                        <div>
+                          <div style="font-size: 9px; color: var(--wire-subtext); font-weight: 800; text-transform: uppercase;">PERKAKAS</div>
+                          <div style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin-top: 2px; margin-bottom: 8px; line-height: 1.2;">BATU ASAHAN</div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: auto;">
+                          <div style="font-size: 11.5px; font-weight: 900; color: #0f172a;">
+                            Rp 20.000 <span style="font-size: 9px; font-weight: 600; color: var(--wire-subtext);">/ PCS</span>
+                          </div>
+                          <span style="font-size: 13px; color: var(--wire-subtext);">📚</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Card 2 -->
+                    <div class="product-card">
+                      <div class="product-card-img">
+                        <div style="position: absolute; right: 8px; top: 8px; font-size: 9.5px; font-weight: 800; border: 1.5px solid var(--wire-border-dark); padding: 2px 7px; border-radius: 5px; background: #ffffff;">0 TRUK</div>
+                        <span style="font-size: 28px; opacity: 0.4;">📦</span>
+                      </div>
+                      <div class="product-card-body">
+                        <div>
+                          <div style="font-size: 9px; color: var(--wire-subtext); font-weight: 800; text-transform: uppercase;">BAHAN ALAM</div>
+                          <div style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin-top: 2px; margin-bottom: 8px; line-height: 1.2;">BATU BELAH</div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: auto;">
+                          <div style="font-size: 11.5px; font-weight: 900; color: #0f172a;">
+                            Rp 3.600.000 <span style="font-size: 9px; font-weight: 600; color: var(--wire-subtext);">/ TRUK</span>
+                          </div>
+                          <span style="font-size: 13px; color: var(--wire-subtext);">📚</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Card 3 -->
+                    <div class="product-card">
+                      <div class="product-card-img">
+                        <div style="position: absolute; right: 8px; top: 8px; font-size: 9.5px; font-weight: 800; border: 1.5px solid var(--wire-border-dark); padding: 2px 7px; border-radius: 5px; background: #ffffff;">1.9 BOX</div>
+                        <span style="font-size: 28px; opacity: 0.4;">📦</span>
+                      </div>
+                      <div class="product-card-body">
+                        <div>
+                          <div style="font-size: 9px; color: var(--wire-subtext); font-weight: 800; text-transform: uppercase;">PAKU DAN SKRUP</div>
+                          <div style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin-top: 2px; margin-bottom: 8px; line-height: 1.2;">BAUT BAJA AKS</div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: auto;">
+                          <div style="font-size: 11.5px; font-weight: 900; color: #0f172a;">
+                            Rp 230.000 <span style="font-size: 9px; font-weight: 600; color: var(--wire-subtext);">/ BOX</span>
+                          </div>
+                          <span style="font-size: 13px; color: var(--wire-subtext);">📚</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Card 4 -->
+                    <div class="product-card">
+                      <div class="product-card-img">
+                        <div style="position: absolute; right: 8px; top: 8px; font-size: 9.5px; font-weight: 800; border: 1.5px solid var(--wire-border-dark); padding: 2px 7px; border-radius: 5px; background: #ffffff;">62 PCS</div>
+                        <span style="font-size: 28px; opacity: 0.4;">📦</span>
+                      </div>
+                      <div class="product-card-body">
+                        <div>
+                          <div style="font-size: 9px; color: var(--wire-subtext); font-weight: 800; text-transform: uppercase;">PERKAKAS</div>
+                          <div style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin-top: 2px; margin-bottom: 8px; line-height: 1.2;">BENANG</div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: auto;">
+                          <div style="font-size: 11.5px; font-weight: 900; color: #0f172a;">
+                            Rp 5.000 <span style="font-size: 9px; font-weight: 600; color: var(--wire-subtext);">/ PCS</span>
+                          </div>
+                          <span style="font-size: 13px; color: var(--wire-subtext);">📚</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Card 5 -->
+                    <div class="product-card">
+                      <div class="product-card-img">
+                        <div style="position: absolute; right: 8px; top: 8px; font-size: 9.5px; font-weight: 800; border: 1.5px solid var(--wire-border-dark); padding: 2px 7px; border-radius: 5px; background: #ffffff;">6 LEMBAR</div>
+                        <span style="font-size: 28px; opacity: 0.4;">📦</span>
+                      </div>
+                      <div class="product-card-body">
+                        <div>
+                          <div style="font-size: 9px; color: var(--wire-subtext); font-weight: 800; text-transform: uppercase;">ATAP</div>
+                          <div style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin-top: 2px; margin-bottom: 8px; line-height: 1.2;">ALDERON DOBLE 6 METER</div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: auto;">
+                          <div style="font-size: 11.5px; font-weight: 900; color: #0f172a;">
+                            Rp 1.250.000 <span style="font-size: 9px; font-weight: 600; color: var(--wire-subtext);">/ LEMBAR</span>
+                          </div>
+                          <span style="font-size: 13px; color: var(--wire-subtext);">📚</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Card 6 -->
+                    <div class="product-card">
+                      <div class="product-card-img">
+                        <div style="position: absolute; right: 8px; top: 8px; font-size: 9.5px; font-weight: 800; border: 1.5px solid #000000; padding: 2px 7px; border-radius: 5px; background: #ffffff;">1 LEMBAR</div>
+                        <span style="font-size: 28px; opacity: 0.4;">📦</span>
+                      </div>
+                      <div class="product-card-body">
+                        <div>
+                          <div style="font-size: 9px; color: var(--wire-subtext); font-weight: 800; text-transform: uppercase;">ATAP</div>
+                          <div style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin-top: 2px; margin-bottom: 8px; line-height: 1.2;">ALDERON RS TRIMDECK</div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: auto;">
+                          <div style="font-size: 11.5px; font-weight: 900; color: #0f172a;">
+                            Rp 300.000 <span style="font-size: 9px; font-weight: 600; color: var(--wire-subtext);">/ LEMBAR</span>
+                          </div>
+                          <span style="font-size: 13px; color: var(--wire-subtext);">📚</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Card 7 -->
+                    <div class="product-card">
+                      <div class="product-card-img">
+                        <div style="position: absolute; right: 8px; top: 8px; font-size: 9.5px; font-weight: 800; border: 1.5px solid var(--wire-border-dark); padding: 2px 7px; border-radius: 5px; background: #ffffff;">15 BATANG</div>
+                        <span style="font-size: 28px; opacity: 0.4;">📦</span>
+                      </div>
+                      <div class="product-card-body">
+                        <div>
+                          <div style="font-size: 9px; color: var(--wire-subtext); font-weight: 800; text-transform: uppercase;">BAHAN KONTRUKSI</div>
+                          <div style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin-top: 2px; margin-bottom: 8px; line-height: 1.2;">BESI BETON 10MM FULL</div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: auto;">
+                          <div style="font-size: 11.5px; font-weight: 900; color: #0f172a;">
+                            Rp 85.000 <span style="font-size: 9px; font-weight: 600; color: var(--wire-subtext);">/ BATANG</span>
+                          </div>
+                          <span style="font-size: 13px; color: var(--wire-subtext);">📚</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Card 8 -->
+                    <div class="product-card">
+                      <div class="product-card-img">
+                        <div style="position: absolute; right: 8px; top: 8px; font-size: 9.5px; font-weight: 800; border: 1.5px solid var(--wire-border-dark); padding: 2px 7px; border-radius: 5px; background: #ffffff;">40 PCS</div>
+                        <span style="font-size: 28px; opacity: 0.4;">📦</span>
+                      </div>
+                      <div class="product-card-body">
+                        <div>
+                          <div style="font-size: 9px; color: var(--wire-subtext); font-weight: 800; text-transform: uppercase;">PAKU DAN SKRUP</div>
+                          <div style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin-top: 2px; margin-bottom: 8px; line-height: 1.2;">PAKU SENG 2 INCH</div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: auto;">
+                          <div style="font-size: 11.5px; font-weight: 900; color: #0f172a;">
+                            Rp 25.000 <span style="font-size: 9px; font-weight: 600; color: var(--wire-subtext);">/ PCS</span>
+                          </div>
+                          <span style="font-size: 13px; color: var(--wire-subtext);">📚</span>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+
+                <!-- Right: Cart Sidebar (Side Cart 2 Fase) -->
+                <div class="cart-panel" style="position: relative; background: #ffffff;">
+                  <!-- FASE 1: KERANJANG BELANJA -->
+                  <div id="cart-phase-1" style="display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
+                    <div>
+                      <!-- Cart Header -->
+                      <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1.5px solid var(--wire-border-dark); margin-bottom: 10px;">
+                        <div style="font-weight: 800; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                          Keranjang Belanja <span class="wf-badge" style="background: #f1f5f9; color: #000; border-color: #000; font-size: 10px;">2</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                          <button style="border: 1px solid var(--wire-border-dark); background: #fff; padding: 2px 6px; font-size: 10px; border-radius: 4px; font-weight: 700; cursor: pointer;">Gantung</button>
+                          <button style="border: 1px solid var(--wire-border-dark); background: #fff; padding: 2px 6px; font-size: 10px; border-radius: 4px; font-weight: 700; cursor: pointer;" title="Reset Cart">🔄</button>
+                        </div>
+                      </div>
+
+                      <!-- Cart Item 1 -->
+                      <div class="cart-item" style="padding: 8px; border-radius: 6px; margin-bottom: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 4px;">
+                          <div style="display: flex; gap: 6px; align-items: center;">
+                            <span style="font-size: 14px;">📦</span>
+                            <span style="font-weight: 800; font-size: 11px; line-height: 1.2;">ALDERON RS TRIMDECK 1.2MM X 83...</span>
+                          </div>
+                          <span style="cursor: pointer; color: #64748b; font-weight: 900; font-size: 11px;">⋮</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+                          <select style="font-size: 10px; padding: 2px 4px; border: 1px solid var(--wire-border-dark); border-radius: 4px; font-weight: 600;">
+                            <option>Satuan: LEMBAR ↕</option>
+                          </select>
+                          <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 10px; color: var(--wire-subtext); font-weight: 600;">@ Rp 300000 / LEMBAR</span>
+                          </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+                          <div style="display: flex; align-items: center; gap: 8px; border: 1px solid var(--wire-border-dark); border-radius: 4px; padding: 1px 6px;">
+                            <span style="cursor: pointer; font-weight: 800;">-</span>
+                            <span style="font-weight: 800; font-size: 11.5px;">1</span>
+                            <span style="cursor: pointer; font-weight: 800;">+</span>
+                          </div>
+                          <div style="font-weight: 900; font-size: 12px; color: #000000;">
+                            Rp 300.000
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Cart Item 2 -->
+                      <div class="cart-item" style="padding: 8px; border-radius: 6px; margin-bottom: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 4px;">
+                          <div style="display: flex; gap: 6px; align-items: center;">
+                            <span style="font-size: 14px;">📦</span>
+                            <span style="font-weight: 800; font-size: 11px; line-height: 1.2;">ALDERON SINGLE 6 METER</span>
+                          </div>
+                          <span style="cursor: pointer; color: #64748b; font-weight: 900; font-size: 11px;">⋮</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+                          <select style="font-size: 10px; padding: 2px 4px; border: 1px solid var(--wire-border-dark); border-radius: 4px; font-weight: 600;">
+                            <option>Satuan: LEMBAR ↕</option>
+                          </select>
+                          <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 10px; color: var(--wire-subtext); font-weight: 600;">@ Rp 450000 / LEMBAR</span>
+                          </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+                          <div style="display: flex; align-items: center; gap: 8px; border: 1px solid var(--wire-border-dark); border-radius: 4px; padding: 1px 6px;">
+                            <span style="cursor: pointer; font-weight: 800;">-</span>
+                            <span style="font-weight: 800; font-size: 11.5px;">1</span>
+                            <span style="cursor: pointer; font-weight: 800;">+</span>
+                          </div>
+                          <div style="font-weight: 900; font-size: 12px; color: #000000;">
+                            Rp 450.000
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Checkout Summary Footer (Matching actual App) -->
+                    <div style="border-top: 1.5px solid var(--wire-border-dark); padding-top: 8px; margin-top: 8px;">
+                      <!-- Diskon Tambahan with Preset Percentage Pills -->
+                      <div style="margin-bottom: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                          <span style="font-size: 11px; font-weight: 700; color: var(--wire-subtext);">Diskon Tambahan</span>
+                          <div style="display: flex; gap: 4px; align-items: center;">
+                            <select style="font-size: 10px; padding: 1px 4px; border: 1px solid var(--wire-border-dark); border-radius: 3px;">
+                              <option>Rp ↕</option>
+                              <option>%</option>
+                            </select>
+                            <input type="text" value="0" class="wf-input" style="width: 50px; font-size: 11px; text-align: right; padding: 1px 4px; border-radius: 3px; font-weight: 700;" readonly />
+                          </div>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; gap: 4px;">
+                          <button style="border: 1px solid var(--wire-border-dark); background: #ffffff; padding: 1px 5px; font-size: 9.5px; border-radius: 3px; cursor: pointer; font-weight: 700;">5%</button>
+                          <button style="border: 1px solid var(--wire-border-dark); background: #ffffff; padding: 1px 5px; font-size: 9.5px; border-radius: 3px; cursor: pointer; font-weight: 700;">10%</button>
+                          <button style="border: 1px solid var(--wire-border-dark); background: #ffffff; padding: 1px 5px; font-size: 9.5px; border-radius: 3px; cursor: pointer; font-weight: 700;">15%</button>
+                          <button style="border: 1px solid var(--wire-border-dark); background: #ffffff; padding: 1px 5px; font-size: 9.5px; border-radius: 3px; cursor: pointer; font-weight: 700;">20%</button>
+                        </div>
+                      </div>
+
+                      <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 900; margin-bottom: 8px; border-top: 1px dashed var(--wire-border-dark); padding-top: 6px;">
+                        <span>Total Pembayaran</span>
+                        <span style="color: #0f172a; font-size: 14px;">Rp 750.000</span>
+                      </div>
+                      <button class="wf-btn wf-btn-primary w-full" onclick="showCartPhase(2)" style="padding: 9px; font-size: 12.5px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; background: #0f172a; color: #ffffff; border-radius: 6px;">
+                        💳 Bayar Transaksi
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- FASE 2: PEMBAYARAN -->
+                  <div id="cart-phase-2" style="display: none; flex-direction: column; justify-content: space-between; height: 100%;">
+                    <div>
+                      <!-- Header with Back Arrow -->
+                      <div style="display: flex; align-items: center; gap: 8px; padding-bottom: 8px; border-bottom: 2px solid var(--wire-border-dark); margin-bottom: 12px;">
+                        <button onclick="showCartPhase(1)" style="border: 1.5px solid var(--wire-border-dark); background: #ffffff; cursor: pointer; font-size: 14px; font-weight: 800; line-height: 1; padding: 4px 8px; border-radius: 4px; display: flex; align-items: center; justify-content: center;" title="Kembali ke Keranjang">
+                          ←
+                        </button>
+                        <div style="font-weight: 800; font-size: 14px; color: var(--wire-text);">Pembayaran</div>
+                        <span class="wf-badge" style="margin-left: auto; font-size: 10px; background: #f4f4f5; color: #000000; border-color: #000000;">Fase 2</span>
+                      </div>
+
+                      <!-- Tanggal Transaksi -->
+                      <div style="margin-bottom: 12px;">
+                        <label style="font-size: 11px; color: var(--wire-subtext); font-weight: 700; display: block; margin-bottom: 4px;">
+                          Tanggal Transaksi
+                        </label>
+                        <input type="text" class="wf-input" value="29 Agustus 2026" style="font-size: 12px; font-weight: 600; padding: 6px 10px; width: 100%; border-radius: 4px;" readonly />
+                      </div>
+
+                      <!-- Banner Total Tagihan -->
+                      <div style="background: #f8fafc; border: 1.5px solid var(--wire-border-dark); border-radius: 6px; padding: 10px; text-align: center; margin-bottom: 12px;">
+                        <div style="font-size: 11px; color: var(--wire-subtext); font-weight: 700; margin-bottom: 2px;">Total Tagihan</div>
+                        <div style="font-size: 22px; font-weight: 900; color: var(--wire-text);" id="wf-cart-total-tagihan">Rp 750.000</div>
+                      </div>
+
+                      <!-- Metode Pembayaran -->
+                      <div style="margin-bottom: 12px;">
+                        <label style="font-size: 11px; font-weight: 800; display: block; margin-bottom: 6px;">Metode Pembayaran</label>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;">
+                          <button class="wf-btn wf-pay-method active" onclick="selectPayMethod(this, 'tunai')" style="font-size: 11px; padding: 6px; display: flex; align-items: center; justify-content: center; background: #0f172a; color: #ffffff; border: 1px solid #0f172a; border-radius: 4px; font-weight: 700; cursor: pointer;">
+                            Tunai
+                          </button>
+                          <button class="wf-btn wf-pay-method" onclick="selectPayMethod(this, 'transfer')" style="font-size: 11px; padding: 6px; display: flex; align-items: center; justify-content: center; background: #ffffff; color: #0f172a; border: 1px solid var(--wire-border-dark); border-radius: 4px; font-weight: 600; cursor: pointer;">
+                            Transfer
+                          </button>
+                          <button class="wf-btn wf-pay-method" onclick="selectPayMethod(this, 'debit')" style="font-size: 11px; padding: 6px; display: flex; align-items: center; justify-content: center; background: #ffffff; color: #0f172a; border: 1px solid var(--wire-border-dark); border-radius: 4px; font-weight: 600; cursor: pointer;">
+                            Debit
+                          </button>
+                          <button class="wf-btn wf-pay-method" onclick="selectPayMethod(this, 'qris')" style="font-size: 11px; padding: 6px; display: flex; align-items: center; justify-content: center; background: #ffffff; color: #0f172a; border: 1px solid var(--wire-border-dark); border-radius: 4px; font-weight: 600; cursor: pointer;">
+                            QRIS
+                          </button>
+                          <button class="wf-btn wf-pay-method" onclick="selectPayMethod(this, 'split')" style="font-size: 11px; padding: 6px; display: flex; align-items: center; justify-content: center; background: #ffffff; color: #0f172a; border: 1px solid var(--wire-border-dark); border-radius: 4px; font-weight: 600; cursor: pointer; grid-column: span 2;">
+                            Split
+                          </button>
+                        </div>
+                      </div>
+
+                      <!-- Area Rincian Metode Tunai -->
+                      <div id="wf-cash-section">
+                        <div style="margin-bottom: 10px;">
+                          <label style="font-size: 11px; color: var(--wire-subtext); font-weight: 700; display: block; margin-bottom: 4px;">Uang Diterima</label>
+                          <div style="position: relative;">
+                            <span style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 12px; font-weight: 800; color: #000000;">Rp</span>
+                            <input type="text" id="wf-uang-diterima" class="wf-input" value="0" oninput="updateChangeCalculation()" style="padding-left: 32px; font-size: 13px; font-weight: 800; width: 100%; border-radius: 4px;" />
+                          </div>
+                        </div>
+
+                        <div style="margin-bottom: 10px;">
+                          <div style="font-size: 10px; color: var(--wire-subtext); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">SARAN UANG TUNAI</div>
+                          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;">
+                            <button class="wf-btn wf-btn-outline" onclick="setCashReceived('750.000')" style="padding: 5px; font-size: 11px; font-weight: 700; color: #000000; border: 1px solid var(--wire-border-dark); background: #ffffff; border-radius: 4px; cursor: pointer;">Uang Pas</button>
+                            <button class="wf-btn wf-btn-outline" onclick="setCashReceived('800.000')" style="padding: 5px; font-size: 11px; font-weight: 700; color: #000000; border: 1px solid var(--wire-border-dark); background: #ffffff; border-radius: 4px; cursor: pointer;">Rp 800.000</button>
+                            <button class="wf-btn wf-btn-outline" onclick="setCashReceived('900.000')" style="padding: 5px; font-size: 11px; font-weight: 700; color: #000000; border: 1px solid var(--wire-border-dark); background: #ffffff; border-radius: 4px; cursor: pointer;">Rp 900.000</button>
+                            <button class="wf-btn wf-btn-outline" onclick="setCashReceived('1.000.000')" style="padding: 5px; font-size: 11px; font-weight: 700; color: #000000; border: 1px solid var(--wire-border-dark); background: #ffffff; border-radius: 4px; cursor: pointer;">Rp 1.000.000</button>
+                          </div>
+                        </div>
+
+                        <!-- Status Kurang Bayar / Kembalian -->
+                        <div id="wf-change-box" style="padding: 8px 12px; border-radius: 4px; border: 1.5px solid #000000; background: #f8fafc; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                          <span style="font-size: 12px; font-weight: 800; color: #000000;" id="wf-change-label">Kurang Bayar</span>
+                          <span style="font-size: 14px; font-weight: 900; color: #000000;" id="wf-change-amount">Rp 750.000</span>
+                        </div>
+                      </div>
+
+                      <!-- Area Non-Tunai (Transfer / Debit / QRIS) -->
+                      <div id="wf-noncash-section" style="display: none; padding: 12px; border-radius: 4px; border: 1px solid var(--wire-border-dark); background: #f8fafc; text-align: center; margin-bottom: 12px;">
+                        <div style="font-size: 11px; color: var(--wire-subtext); line-height: 1.4;">
+                          Silakan proses pembayaran melalui scan QRIS / EDC / Transfer sebesar
+                        </div>
+                        <div style="font-size: 15px; font-weight: 900; color: #000000; margin-top: 4px;">Rp 750.000</div>
+                      </div>
+
+                      <!-- Area Split Payment -->
+                      <div id="wf-split-section" style="display: none; margin-bottom: 12px; padding: 10px; border-radius: 4px; border: 1px solid var(--wire-border-dark); background: #f8fafc;">
+                        <div style="margin-bottom: 8px;">
+                          <label style="font-size: 10px; color: var(--wire-subtext); font-weight: 700; display: block; margin-bottom: 2px;">Nominal Tunai</label>
+                          <input type="text" class="wf-input" value="500.000" style="font-size: 11px; padding: 4px 8px; width: 100%; border-radius: 4px;" />
+                        </div>
+                        <div>
+                          <label style="font-size: 10px; color: var(--wire-subtext); font-weight: 700; display: block; margin-bottom: 2px;">Nominal Transfer / Debit</label>
+                          <input type="text" class="wf-input" value="250.000" style="font-size: 11px; padding: 4px 8px; width: 100%; border-radius: 4px;" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Tombol Eksekusi Bayar Transaksi -->
+                    <div style="border-top: 2px solid var(--wire-border-dark); padding-top: 10px; margin-top: 10px;">
+                      <button class="wf-btn wf-btn-primary w-full" onclick="switchTab('wf-checkout')" style="padding: 10px; font-size: 13px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                        Bayar Transaksi
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ==================== WIREFRAME 3: MODAL PEMBAYARAN & STRUK ==================== -->
+    <div id="wf-checkout" class="wireframe-view">
+      <div class="wf-canvas" style="background: #f1f5f9; padding: 12px; display: flex; align-items: center; justify-content: center;">
+        <div class="modal-overlay">
+          <div class="modal-header">
+            <span>Form Transaksi Pembayaran</span>
+            <span style="cursor: pointer;" onclick="switchTab('wf-pos')" title="Tutup Modal & Kembali ke POS">✕</span>
+          </div>
+          <div class="modal-body">
+            
+            <!-- Form Left -->
+            <div>
+              <div style="background: #f8fafc; border: 1.5px solid var(--wire-border-dark); border-radius: 5px; padding: 10px; margin-bottom: 10px; text-align: center;">
+                <div style="font-size: 11px; color: var(--wire-subtext); font-weight: 700;">TOTAL TAGIHAN</div>
+                <div style="font-size: 22px; font-weight: 900; color: var(--wire-accent);">Rp 335.000</div>
+              </div>
+
+              <!-- Payment Method Tabs -->
+              <div style="margin-bottom: 10px;">
+                <label style="font-size: 11px; font-weight: 800; display: block; margin-bottom: 4px;">Metode Pembayaran</label>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
+                  <button class="wf-btn wf-btn-primary" style="font-size: 11px; padding: 5px 6px;">Tunai</button>
+                  <button class="wf-btn wf-btn-outline" style="font-size: 11px; padding: 5px 6px;">QRIS</button>
+                  <button class="wf-btn wf-btn-outline" style="font-size: 11px; padding: 5px 6px;">Transfer</button>
+                </div>
+              </div>
+
+              <!-- Nominal Bayar Input & Preset -->
+              <div style="margin-bottom: 10px;">
+                <label style="font-size: 11px; font-weight: 800; display: block; margin-bottom: 4px;">Nominal Diterima (Rp)</label>
+                <input type="text" class="wf-input" value="400.000" style="font-size: 14px; font-weight: 800; padding: 6px 10px;" readonly />
+                <div style="display: flex; gap: 6px; margin-top: 6px;">
+                  <button class="wf-btn wf-btn-outline" style="padding: 4px 8px; font-size: 10.5px;">[Pas] Rp 335k</button>
+                  <button class="wf-btn wf-btn-outline" style="padding: 4px 8px; font-size: 10.5px;">Rp 350k</button>
+                  <button class="wf-btn wf-btn-primary" style="padding: 4px 8px; font-size: 10.5px;">Rp 400k</button>
+                </div>
+              </div>
+
+              <!-- Calculation Result -->
+              <div style="background: #f8fafc; border: 1.5px solid #000000; border-radius: 5px; padding: 10px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <div style="font-size: 11px; font-weight: 700; color: #000000;">UANG KEMBALIAN</div>
+                  <div style="font-size: 18px; font-weight: 900; color: #000000;">Rp 65.000</div>
+                </div>
+                <span class="wf-badge" style="background: #ffffff; border-color: #000000; color: #000000;">Lunas</span>
+              </div>
+
+              <button class="wf-btn wf-btn-primary w-full" onclick="switchTab('wf-pos')" style="padding: 10px; font-size: 13px; font-weight: 800; cursor: pointer;">
+                SELESAIKAN & CETAK STRUK
+              </button>
+            </div>
+
+            <!-- Receipt Right -->
+            <div>
+              <div style="font-size: 12px; font-weight: 800; margin-bottom: 6px;">Preview Struk Thermal (80mm)</div>
+              
+              <div class="receipt-box">
+                <div class="receipt-header">
+                  <strong style="font-size: 12px;">RETAIL KECIL MENENGAH</strong><br/>
+                  Jl. Raya Utama No. 123, Jakarta<br/>
+                  Telp: 0812-3456-7890
+                </div>
+
+                <div style="margin-bottom: 6px;">
+                  No. Struk : TRX-20260828-004<br/>
+                  Tanggal   : 28/08/2026 16:40<br/>
+                  Kasir     : Manager Toko
+                </div>
+
+                <div style="border-top: 1px dashed #333; border-bottom: 1px dashed #333; padding: 4px 0; margin-bottom: 6px;">
+                  <div>AQUAPROOF ABU 1 KG</div>
+                  <div style="display: flex; justify-content: space-between;">
+                    <span>1 KG x 75.000</span>
+                    <span>75.000</span>
+                  </div>
+                  <div style="margin-top: 4px;">ALDERON RS TRIMDECK</div>
+                  <div style="display: flex; justify-content: space-between;">
+                    <span>1 LEMBAR x 300.000</span>
+                    <span>300.000</span>
+                  </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between;">
+                  <span>Subtotal:</span> <span>375.000</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <span>Diskon:</span> <span>-40.000</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-weight: bold; margin-top: 4px; border-top: 1px solid #333; padding-top: 4px;">
+                  <span>TOTAL:</span> <span>Rp 335.000</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <span>TUNAI:</span> <span>Rp 400.000</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-weight: bold;">
+                  <span>KEMBALI:</span> <span>Rp 65.000</span>
+                </div>
+
+                <div style="text-align: center; margin-top: 10px; border-top: 1px dashed #333; padding-top: 6px;">
+                  *** TERIMA KASIH ***<br/>
+                  Barang yang sudah dibeli<br/>tidak dapat ditukar/dikembalikan
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ==================== WIREFRAME 4: DASHBOARD ==================== -->
+    <div id="wf-dashboard" class="wireframe-view">
+      <div class="wf-canvas">
+        <div class="app-shell">
+          <!-- Sidebar -->
+          <div class="app-sidebar">
+            <div>
+              <div class="sidebar-brand" onclick="switchTab('wf-pos')" style="display: flex; align-items: center; gap: 8px;">
+                <span>🏪</span> Retail Kecil Menengah
+              </div>
+              <div style="font-size: 10px; color: var(--wire-subtext); margin: 8px 0 4px 2px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Main Menu</div>
+              <div class="sidebar-menu">
+                <div class="menu-item" onclick="switchTab('wf-pos')">
+                  <span>🛒</span> Point of Sale (POS)
+                </div>
+                <div class="menu-item active" onclick="switchTab('wf-dashboard')">
+                  <span>🔲</span> Dashboard
+                </div>
+                <div class="menu-item" onclick="switchTab('wf-inventory')">
+                  <span>📦</span> Inventory
+                </div>
+                <div class="menu-item" onclick="switchTab('wf-reports')">
+                  <span>📄</span> Laporan
+                </div>
+              </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <div class="menu-item" onclick="switchTab('wf-pos')">
+                <span>⚙️</span> Pengaturan
+              </div>
+              <div style="font-size: 11px; padding: 8px; border: 1.5px solid var(--wire-border-dark); border-radius: 6px; background: #fff; display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <div style="width: 28px; height: 28px; border-radius: 50%; background: #0f172a; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 10px;">AD</div>
+                  <div>
+                    <strong style="font-size: 11px; display: block; line-height: 1.1;">Administrator</strong>
+                    <span style="color: var(--wire-subtext); font-size: 9.5px; font-weight: 700;">ADMIN</span>
+                  </div>
+                </div>
+                <span style="cursor: pointer; font-weight: 900; color: #64748b;">⋮</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main Dashboard -->
+          <div class="app-main">
+            <!-- Header Bar -->
+            <div class="app-header" style="padding: 12px 18px;">
+              <div style="font-weight: 900; font-size: 20px; color: #0f172a;">Dashboard</div>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <select class="wf-input" style="font-size: 11px; padding: 5px 10px; width: 140px;">
+                  <option>7 Hari Terakhir</option>
+                  <option>Bulan Ini</option>
+                  <option>Tahun Ini</option>
+                </select>
+                <button class="wf-btn wf-btn-outline" style="padding: 5px 10px; font-size: 12px;" title="Refresh Data">🔄</button>
+                <button class="wf-btn wf-btn-outline" onclick="switchTab('wf-inventory')" style="padding: 5px 12px; font-size: 11.5px; font-weight: 700;">Stok Inventaris</button>
+                <button class="wf-btn wf-btn-primary" onclick="switchTab('wf-pos')" style="padding: 5px 14px; font-size: 11.5px; font-weight: 800; background: #0f172a;">Buka POS</button>
+              </div>
+            </div>
+
+            <div class="app-body" style="background: #fafafa; padding: 16px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; flex: 1;">
+              
+              <!-- 1. KPI Cards Grid (4 Cards) -->
+              <div class="kpi-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 0;">
+
+                <!-- Card 1: Total Omzet -->
+                <div class="kpi-card" style="border: 1.5px solid var(--wire-border-dark); border-radius: 6px; padding: 12px; background: #ffffff;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <span style="font-size: 11px; color: var(--wire-subtext); font-weight: 700;">Total Omzet</span>
+                    <span class="wf-badge" style="background: #f4f4f5; color: #000000; border-color: #000000; font-size: 10px;">📉 -8.1%</span>
+                  </div>
+                  <div style="font-size: 19px; font-weight: 900; color: #0f172a; margin-top: 2px;">Rp 12.553.000</div>
+                  <div style="font-size: 10px; color: var(--wire-subtext); margin-top: 4px;">Total omzet kotor periode ini</div>
+                </div>
+
+                <!-- Card 2: Estimasi Laba -->
+                <div class="kpi-card" style="border: 1.5px solid var(--wire-border-dark); border-radius: 6px; padding: 12px; background: #ffffff;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <span style="font-size: 11px; color: var(--wire-subtext); font-weight: 700;">Estimasi Laba</span>
+                    <span class="wf-badge" style="background: #f4f4f5; color: #000000; border-color: #000000; font-size: 10px;">📈 +14.3%</span>
+                  </div>
+                  <div style="font-size: 19px; font-weight: 900; color: #0f172a; margin-top: 2px;">Rp 1.798.280</div>
+                  <div style="font-size: 10px; color: var(--wire-subtext); margin-top: 4px;">HPP: <strong>Rp 10.754.720</strong></div>
+                </div>
+
+                <!-- Card 3: Total Transaksi -->
+                <div class="kpi-card" style="border: 1.5px solid var(--wire-border-dark); border-radius: 6px; padding: 12px; background: #ffffff;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <span style="font-size: 11px; color: var(--wire-subtext); font-weight: 700;">Total Transaksi</span>
+                    <span class="wf-badge" style="background: #f4f4f5; color: #000000; border-color: #000000; font-size: 10px;">📉 -7.7%</span>
+                  </div>
+                  <div style="font-size: 19px; font-weight: 900; color: #0f172a; margin-top: 2px;">
+                    24 <span style="font-size: 12px; font-weight: 600; color: #475569;">Trx</span>
+                  </div>
+                  <div style="font-size: 10px; color: var(--wire-subtext); margin-top: 4px;">AOV: <strong>Rp 523.042</strong></div>
+                </div>
+
+                <!-- Card 4: Stok Menipis -->
+                <div class="kpi-card" style="border: 1.5px solid var(--wire-border-dark); border-radius: 6px; padding: 12px; background: #f8fafc;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <span style="font-size: 11px; color: #000000; font-weight: 800;">Stok Menipis</span>
+                    <span class="wf-badge" style="background: #ffffff; color: #000000; border-color: #000000; font-size: 10px; font-weight: 800;">Reorder</span>
+                  </div>
+                  <div style="font-size: 19px; font-weight: 900; color: #000000; margin-top: 2px;">
+                    5 <span style="font-size: 12px; font-weight: 600;">Item</span>
+                  </div>
+                  <div style="font-size: 10px; color: var(--wire-subtext); margin-top: 4px;">Produk di bawah batas minim...</div>
+                </div>
+
+              </div>
+
+              <!-- 2. Middle Section Grid (2 Charts: Omset vs Laba & Arus Kas Toko) -->
+              <div style="display: grid; grid-template-columns: 1.6fr 1fr; gap: 12px;">
+                
+                <!-- Left Chart: Grafik Tren Omset vs Laba Bersih -->
+                <div style="border: 1.5px solid var(--wire-border-dark); border-radius: 6px; padding: 14px; background: #ffffff; display: flex; flex-direction: column; justify-content: space-between; min-height: 230px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <div style="font-weight: 800; font-size: 13px; color: #0f172a;">Grafik Tren Omset vs Laba Bersih</div>
+                    <div style="display: flex; gap: 12px; font-size: 10.5px; font-weight: 700;">
+                      <span style="display: flex; align-items: center; gap: 4px;">● Omset</span>
+                      <span style="display: flex; align-items: center; gap: 4px; color: #64748b;">● Laba Bersih</span>
+                    </div>
+                  </div>
+
+                  <!-- Wave Area Chart SVG Representation (Safe Top Padding for Peak Curve) -->
+                  <div style="height: 125px; width: 100%; position: relative; margin: 4px 0 6px 0;">
+                    <svg viewBox="0 0 400 110" preserveAspectRatio="none" style="width: 100%; height: 100%;">
+                      <!-- Grid lines -->
+                      <line x1="0" y1="25" x2="400" y2="25" stroke="#e2e8f0" stroke-dasharray="2,2"/>
+                      <line x1="0" y1="60" x2="400" y2="60" stroke="#e2e8f0" stroke-dasharray="2,2"/>
+                      <line x1="0" y1="95" x2="400" y2="95" stroke="#cbd5e1" stroke-width="1"/>
+
+                      <!-- Omset Area Wave (Top Peak at y=22, 22px padding from top edge) -->
+                      <path d="M 0,95 Q 50,50 100,58 T 200,32 T 300,22 T 400,98 L 400,105 L 0,105 Z" fill="#e2e8f0" opacity="0.6"/>
+                      <path d="M 0,95 Q 50,50 100,58 T 200,32 T 300,22 T 400,98" fill="none" stroke="#000000" stroke-width="2.5"/>
+
+                      <!-- Laba Bersih Wave -->
+                      <path d="M 0,98 Q 60,94 120,90 T 240,84 T 360,80 L 400,102 L 0,102 Z" fill="#cbd5e1" opacity="0.4"/>
+                      <path d="M 0,98 Q 60,94 120,90 T 240,84 T 360,80 L 400,102" fill="none" stroke="#64748b" stroke-width="1.8" stroke-dasharray="4,2"/>
+                    </svg>
+                  </div>
+
+                  <!-- Date Labels Row (Clear & Bold) -->
+                  <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 800; color: #0f172a; padding-top: 6px; border-top: 1.5px solid #cbd5e1; background: #ffffff; position: relative; z-index: 10;">
+                    <span>24 Agu</span> <span>25 Agu</span> <span>26 Agu</span> <span>27 Agu</span> <span>28 Agu</span> <span>29 Agu</span> <span>30 Agu</span> <span>31 Agu</span>
+                  </div>
+                </div>
+
+                <!-- Right Chart: Arus Kas Toko -->
+                <div style="border: 1.5px solid var(--wire-border-dark); border-radius: 6px; padding: 14px; background: #ffffff; display: flex; flex-direction: column; justify-content: space-between; min-height: 230px;">
+                  <div style="font-weight: 800; font-size: 13px; color: #0f172a; margin-bottom: 6px;">Arus Kas Toko</div>
+
+                  <div style="height: 125px; display: flex; align-items: flex-end; justify-content: space-around; padding: 0 10px 4px 10px; margin: 4px 0 6px 0;">
+                    <div style="width: 14px; height: 45%; background: #64748b; border-radius: 2px 2px 0 0;"></div>
+                    <div style="width: 14px; height: 38%; background: #64748b; border-radius: 2px 2px 0 0;"></div>
+                    <div style="width: 14px; height: 50%; background: #64748b; border-radius: 2px 2px 0 0;"></div>
+                    <div style="width: 14px; height: 80%; background: #0f172a; border-radius: 2px 2px 0 0;"></div>
+                    <div style="width: 14px; height: 28%; background: #64748b; border-radius: 2px 2px 0 0;"></div>
+                    <div style="width: 14px; height: 60%; background: #64748b; border-radius: 2px 2px 0 0;"></div>
+                    <div style="width: 14px; height: 90%; background: #0f172a; border-radius: 2px 2px 0 0;"></div>
+                  </div>
+
+                  <div style="display: flex; justify-content: space-around; font-size: 11px; font-weight: 800; color: #0f172a; padding-top: 6px; border-top: 1.5px solid #cbd5e1; background: #ffffff; position: relative; z-index: 10;">
+                    <span>25 Agu</span> <span>27 Agu</span> <span>29 Agu</span> <span>31 Agu</span>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- 3. Bottom Section Grid (Transaksi Terkini & Tabs Quick Access) -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                
+                <!-- Left Panel: Transaksi Terkini Table -->
+                <div style="border: 1.5px solid var(--wire-border-dark); border-radius: 6px; padding: 12px 14px; background: #ffffff;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #e2e8f0;">
+                    <div>
+                      <strong style="font-size: 13px; color: #0f172a; display: block;">Transaksi Terkini</strong>
+                      <span style="font-size: 10px; color: var(--wire-subtext);">5 transaksi penjualan terbaru yang diproses</span>
+                    </div>
+                    <span onclick="switchTab('wf-reports')" style="font-size: 11px; font-weight: 700; color: #0f172a; text-decoration: underline; cursor: pointer;">Laporan Struk ↗</span>
+                  </div>
+
+                  <table class="wf-table" style="font-size: 11px; margin-top: 0; border: none;">
+                    <thead>
+                      <tr style="background: transparent;">
+                        <th style="border: none; padding: 3px 4px; color: var(--wire-subtext); font-weight: 700;">No. Invoice</th>
+                        <th style="border: none; padding: 3px 4px; color: var(--wire-subtext); font-weight: 700;">Waktu</th>
+                        <th style="border: none; padding: 3px 4px; color: var(--wire-subtext); font-weight: 700; text-align: center;">Kanal Bayar</th>
+                        <th style="border: none; padding: 3px 4px; color: var(--wire-subtext); font-weight: 700; text-align: right;">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr style="border-top: 1px dashed #e2e8f0;">
+                        <td style="border: none; padding: 4px; font-family: monospace; font-weight: 700; color: #2563eb;">INV/20260829/0084</td>
+                        <td style="border: none; padding: 4px; color: var(--wire-subtext);">22.30</td>
+                        <td style="border: none; padding: 4px; text-align: center;"><span class="wf-badge" style="font-size: 9px; padding: 1px 5px;">CASH</span></td>
+                        <td style="border: none; padding: 4px; text-align: right; font-weight: 900; color: #0f172a;">Rp 616.000</td>
+                      </tr>
+                      <tr style="border-top: 1px dashed #e2e8f0;">
+                        <td style="border: none; padding: 4px; font-family: monospace; font-weight: 700; color: #2563eb;">INV/20260829/0043</td>
+                        <td style="border: none; padding: 4px; color: var(--wire-subtext);">21.20</td>
+                        <td style="border: none; padding: 4px; text-align: center;"><span class="wf-badge" style="font-size: 9px; padding: 1px 5px;">CASH</span></td>
+                        <td style="border: none; padding: 4px; text-align: right; font-weight: 900; color: #0f172a;">Rp 850.000</td>
+                      </tr>
+                      <tr style="border-top: 1px dashed #e2e8f0;">
+                        <td style="border: none; padding: 4px; font-family: monospace; font-weight: 700; color: #2563eb;">INV/20260829/0051</td>
+                        <td style="border: none; padding: 4px; color: var(--wire-subtext);">18.20</td>
+                        <td style="border: none; padding: 4px; text-align: center;"><span class="wf-badge" style="font-size: 9px; padding: 1px 5px;">CASH</span></td>
+                        <td style="border: none; padding: 4px; text-align: right; font-weight: 900; color: #0f172a;">Rp 900.000</td>
+                      </tr>
+                      <tr style="border-top: 1px dashed #e2e8f0;">
+                        <td style="border: none; padding: 4px; font-family: monospace; font-weight: 700; color: #2563eb;">INV/20260829/0073</td>
+                        <td style="border: none; padding: 4px; color: var(--wire-subtext);">18.00</td>
+                        <td style="border: none; padding: 4px; text-align: center;"><span class="wf-badge" style="font-size: 9px; padding: 1px 5px;">CASH</span></td>
+                        <td style="border: none; padding: 4px; text-align: right; font-weight: 900; color: #0f172a;">Rp 510.000</td>
+                      </tr>
+                      <tr style="border-top: 1px dashed #e2e8f0;">
+                        <td style="border: none; padding: 4px; font-family: monospace; font-weight: 700; color: #2563eb;">INV/20260829/0029</td>
+                        <td style="border: none; padding: 4px; color: var(--wire-subtext);">17.50</td>
+                        <td style="border: none; padding: 4px; text-align: center;"><span class="wf-badge" style="font-size: 9px; padding: 1px 5px;">CASH</span></td>
+                        <td style="border: none; padding: 4px; text-align: right; font-weight: 900; color: #0f172a;">Rp 325.000</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <!-- Right Panel: Quick Access Tabs (Stok Menipis / Top Produk / Kasir) -->
+                <div style="border: 1.5px solid var(--wire-border-dark); border-radius: 6px; padding: 12px 14px; background: #ffffff;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #e2e8f0;">
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                      <button class="wf-btn wf-btn-primary" style="padding: 3px 8px; font-size: 10.5px;">Stok Menipis (5)</button>
+                      <button class="wf-btn wf-btn-outline" style="padding: 3px 8px; font-size: 10.5px;">Top Produk</button>
+                      <button class="wf-btn wf-btn-outline" style="padding: 3px 8px; font-size: 10.5px;">Kasir</button>
+                    </div>
+                    <span onclick="switchTab('wf-inventory')" style="font-size: 11px; font-weight: 700; color: #0f172a; text-decoration: underline; cursor: pointer;">Restock ↗</span>
+                  </div>
+
+                  <table class="wf-table" style="font-size: 11px; margin-top: 0; border: none;">
+                    <thead>
+                      <tr style="background: transparent;">
+                        <th style="border: none; padding: 3px 4px; color: var(--wire-subtext); font-weight: 700;">Nama Produk</th>
+                        <th style="border: none; padding: 3px 4px; color: var(--wire-subtext); font-weight: 700; text-align: center;">Stok / Min</th>
+                        <th style="border: none; padding: 3px 4px; color: var(--wire-subtext); font-weight: 700; text-align: right;">Status Reorder</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr style="border-top: 1px dashed #e2e8f0;">
+                        <td style="border: none; padding: 4px; font-weight: 700; color: #0f172a;">Besi 10</td>
+                        <td style="border: none; padding: 4px; text-align: center; font-weight: 700;">20 / 75</td>
+                        <td style="border: none; padding: 4px; text-align: right;"><span class="wf-badge" style="background: #ffffff; color: #000000; border-color: #000000; font-size: 9px;">Reorder Required</span></td>
+                      </tr>
+                      <tr style="border-top: 1px dashed #e2e8f0;">
+                        <td style="border: none; padding: 4px; font-weight: 700; color: #0f172a;">Cat Aries 725 Putih Salju</td>
+                        <td style="border: none; padding: 4px; text-align: center; font-weight: 700;">24 / 70</td>
+                        <td style="border: none; padding: 4px; text-align: right;"><span class="wf-badge" style="background: #ffffff; color: #000000; border-color: #000000; font-size: 9px;">Reorder Required</span></td>
+                      </tr>
+                      <tr style="border-top: 1px dashed #e2e8f0;">
+                        <td style="border: none; padding: 4px; font-weight: 700; color: #0f172a;">Bata Ringan / Hebel 10</td>
+                        <td style="border: none; padding: 4px; text-align: center; font-weight: 700;">166 / 400</td>
+                        <td style="border: none; padding: 4px; text-align: right;"><span class="wf-badge" style="background: #ffffff; color: #000000; border-color: #000000; font-size: 9px;">Reorder Required</span></td>
+                      </tr>
+                      <tr style="border-top: 1px dashed #e2e8f0;">
+                        <td style="border: none; padding: 4px; font-weight: 700; color: #0f172a;">Semen Tiga Roda 40 KG</td>
+                        <td style="border: none; padding: 4px; text-align: center; font-weight: 700;">30 / 45</td>
+                        <td style="border: none; padding: 4px; text-align: right;"><span class="wf-badge" style="background: #ffffff; color: #000000; border-color: #000000; font-size: 9px;">Reorder Required</span></td>
+                      </tr>
+                      <tr style="border-top: 1px dashed #e2e8f0;">
+                        <td style="border: none; padding: 4px; font-weight: 700; color: #0f172a;">Split</td>
+                        <td style="border: none; padding: 4px; text-align: center; font-weight: 700;">90 / 120</td>
+                        <td style="border: none; padding: 4px; text-align: right;"><span class="wf-badge" style="background: #ffffff; color: #000000; border-color: #000000; font-size: 9px;">Reorder Required</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ==================== WIREFRAME 5: INVENTARIS ==================== -->
+    <div id="wf-inventory" class="wireframe-view">
+      <div class="wf-canvas">
+        <div class="app-shell">
+          <!-- Sidebar -->
+          <div class="app-sidebar">
+            <div>
+              <div class="sidebar-brand" onclick="switchTab('wf-pos')" style="display: flex; align-items: center; gap: 8px;">
+                <span>🏪</span> Retail Kecil Menengah
+              </div>
+              <div style="font-size: 10px; color: var(--wire-subtext); margin: 8px 0 4px 2px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Main Menu</div>
+              <div class="sidebar-menu">
+                <div class="menu-item" onclick="switchTab('wf-pos')">
+                  <span>🛒</span> Point of Sale (POS)
+                </div>
+                <div class="menu-item" onclick="switchTab('wf-dashboard')">
+                  <span>🔲</span> Dashboard
+                </div>
+                <div class="menu-item active" onclick="switchTab('wf-inventory')">
+                  <span>📦</span> Inventory
+                </div>
+                <div class="menu-item" onclick="switchTab('wf-reports')">
+                  <span>📄</span> Laporan
+                </div>
+              </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <div class="menu-item" onclick="switchTab('wf-pos')">
+                <span>⚙️</span> Pengaturan
+              </div>
+              <div style="font-size: 11px; padding: 8px; border: 1.5px solid var(--wire-border-dark); border-radius: 6px; background: #fff; display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <div style="width: 28px; height: 28px; border-radius: 50%; background: #0f172a; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 10px;">MT</div>
+                  <div>
+                    <strong style="font-size: 11px; display: block; line-height: 1.1;">Manager Toko</strong>
+                    <span style="color: var(--wire-subtext); font-size: 9.5px; font-weight: 700;">MANAGER</span>
+                  </div>
+                </div>
+                <span style="cursor: pointer; font-weight: 900; color: #64748b;">⋮</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main Inventory -->
+          <div class="app-main">
+            <!-- Header Bar -->
+            <div class="app-header">
+              <div style="display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 14px;">
+                <span>Inventory</span>
+              </div>
+            </div>
+
+            <div class="app-body" style="background: #fafafa;">
+
+              <!-- Sub-Navigation Tabs Bar -->
+              <div style="margin-bottom: 8px;">
+                <div style="display: flex; gap: 6px; flex-wrap: wrap; background: #ffffff; padding: 4px; border: 1.5px solid var(--wire-border-dark); border-radius: 6px;">
+                  <button id="btn-sub-katalog" class="wf-btn wf-btn-outline sub-tab-btn" onclick="switchSubTab('inv-katalog')">Katalog & Stok</button>
+                  <button id="btn-sub-abc" class="wf-btn wf-btn-outline sub-tab-btn" onclick="switchSubTab('inv-abc')">Klasifikasi ABC & Stok Min-Max</button>
+                  <button id="btn-sub-restock" class="wf-btn wf-btn-outline sub-tab-btn" onclick="switchSubTab('inv-restock')">Rekomendasi Restock</button>
+                  <button id="btn-sub-mutasi" class="wf-btn wf-btn-primary sub-tab-btn" onclick="switchSubTab('inv-mutasi')">Riwayat Mutasi</button>
+                </div>
+              </div>
+
+              <!-- SUB-TAB 1: KATALOG & STOK -->
+              <div id="inv-katalog" class="sub-tab-content" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <h2 style="font-size: 15px; font-weight: 900; color: #0f172a;">Katalog & Stok</h2>
+                  <div style="display: flex; gap: 6px;">
+                    <button class="wf-btn wf-btn-primary" style="font-size: 11px; padding: 4px 10px; background: #000000; border-color: #000000;">+ Tambah Produk</button>
+                    <button class="wf-btn wf-btn-outline" style="font-size: 11px; padding: 4px 10px; color: #000000; border-color: #000000;">Excel</button>
+                  </div>
+                </div>
+
+                <div class="kpi-grid" style="margin-bottom: 8px; grid-template-columns: repeat(4, 1fr);">
+                  <div class="kpi-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                      <span style="font-size: 10.5px; color: var(--wire-subtext); font-weight: 700;">Total Nilai Aset</span>
+                      <span class="wf-badge" style="background: #e2e8f0;">592 SKU</span>
+                    </div>
+                    <div style="font-size: 15px; font-weight: 900; color: #0f172a;">Rp 223.904.626</div>
+                    <div style="font-size: 9.5px; color: var(--wire-subtext); margin-top: 2px;">Total fisik <strong>32.976</strong> unit di gudang</div>
+                  </div>
+                  <div class="kpi-card" style="border-color: #000000; background: #f8fafc;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                      <span style="font-size: 10.5px; color: #000000; font-weight: bold;">Status Stok</span>
+                      <span class="wf-badge" style="background: #f4f4f5; color: #000000; font-weight: bold; border-color: #000000;">188 Atensi</span>
+                    </div>
+                    <div style="font-size: 15px; font-weight: 900; color: #000000;">188 <span style="font-size: 10px; font-weight: 700; color: #475569;">Item Restock</span></div>
+                    <div style="font-size: 9.5px; margin-top: 2px;"><strong>143 habis</strong>, <strong>45 menipis</strong></div>
+                  </div>
+                  <div class="kpi-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                      <span style="font-size: 10.5px; color: var(--wire-subtext); font-weight: 700;">Klasifikasi ABC</span>
+                      <span class="wf-badge" style="background: #f1f5f9;">Pareto</span>
+                    </div>
+                    <div style="font-size: 14px; font-weight: 800; color: #0f172a;">A: <strong>45</strong> &nbsp;B: 97 &nbsp;C: 450</div>
+                    <div style="font-size: 9.5px; color: var(--wire-subtext); margin-top: 2px;">Klasifikasi ABC optimal</div>
+                  </div>
+                  <div class="kpi-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                      <span style="font-size: 10.5px; color: var(--wire-subtext); font-weight: 700;">Mutasi Hari Ini</span>
+                      <span class="wf-badge" style="background: #f1f5f9;">0 Log</span>
+                    </div>
+                    <div style="font-size: 14px; font-weight: 800; color: #0f172a;">+0 Masuk &nbsp; -0 Keluar</div>
+                    <div style="font-size: 9.5px; color: var(--wire-subtext); margin-top: 2px;">Aktivitas mutasi stok hari ini</div>
+                  </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+                  <input type="text" class="wf-input" placeholder="Cari nama atau kode..." readonly style="font-size: 11px;" />
+                  <select class="wf-input" style="font-size: 11px; padding: 4px;"><option>Semua Kategori</option></select>
+                  <select class="wf-input" style="font-size: 11px; padding: 4px;"><option>Semua Pemasok</option></select>
+                  <select class="wf-input" style="font-size: 11px; padding: 4px;"><option>Semua Status</option></select>
+                  <select class="wf-input" style="font-size: 11px; padding: 4px;"><option>Semua ABC</option></select>
+                  <select class="wf-input" style="font-size: 11px; padding: 4px;"><option>Paling Terlaris</option></select>
+                </div>
+
+                <div>
+                  <table class="wf-table" style="background: #ffffff;">
+                    <thead>
+                      <tr>
+                        <th style="width: 45px;">Foto</th>
+                        <th>Nama Produk</th>
+                        <th>Kategori</th>
+                        <th style="width: 45px; text-align: center;">ABC</th>
+                        <th>Stok</th>
+                        <th>Min/Max</th>
+                        <th>Harga Pokok</th>
+                        <th>Harga Jual</th>
+                        <th style="width: 40px; text-align: center;">...</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <!-- Row 1 -->
+                      <tr>
+                        <td><div class="wf-placeholder-img" style="width: 32px; height: 32px; border-radius: 4px; font-size: 8.5px;">Foto</div></td>
+                        <td><strong>SEMEN GARUDA 40KG</strong><br/><span style="font-size: 9.5px; color: var(--wire-subtext); font-family: monospace;">BRG-412556522</span></td>
+                        <td><span class="wf-badge">Semen</span></td>
+                        <td style="text-align: center;"><span class="wf-badge" style="background: #0f172a; color: #fff; font-weight: bold;">A</span></td>
+                        <td><strong>120.5 ZAK</strong></td>
+                        <td style="font-size: 10.5px; color: var(--wire-subtext);">67 / 301.7</td>
+                        <td>Rp 43.000</td>
+                        <td><strong>Rp 45.000</strong></td>
+                        <td style="text-align: center; font-weight: bold; cursor: pointer;">•••</td>
+                      </tr>
+                      <!-- Row 2 -->
+                      <tr style="background: #f8fafc;">
+                        <td><div class="wf-placeholder-img" style="width: 32px; height: 32px; border-radius: 4px; font-size: 8.5px;">Foto</div></td>
+                        <td><strong>BATA RINGAN / HEBEL 10</strong><br/><span style="font-size: 9.5px; color: var(--wire-subtext); font-family: monospace;">BRG-285062218</span></td>
+                        <td><span class="wf-badge">Hebel</span></td>
+                        <td style="text-align: center;"><span class="wf-badge" style="background: #0f172a; color: #fff; font-weight: bold;">A</span></td>
+                        <td><strong style="color: #000000;">1 KUBIK</strong></td>
+                        <td style="font-size: 10.5px; color: var(--wire-subtext);">7 / 29</td>
+                        <td>Rp 620.000</td>
+                        <td><strong>Rp 650.000</strong></td>
+                        <td style="text-align: center; font-weight: bold; cursor: pointer;">•••</td>
+                      </tr>
+                      <!-- Row 3 -->
+                      <tr>
+                        <td><div class="wf-placeholder-img" style="width: 32px; height: 32px; border-radius: 4px; font-size: 8.5px;">Foto</div></td>
+                        <td><strong>AQUAPROOF ABU 1 KG</strong><br/><span style="font-size: 9.5px; color: var(--wire-subtext); font-family: monospace;">BRG-109283741</span></td>
+                        <td><span class="wf-badge">Cat & Pelapis</span></td>
+                        <td style="text-align: center;"><span class="wf-badge" style="background: #0f172a; color: #fff; font-weight: bold;">A</span></td>
+                        <td><strong>42 KALENG</strong></td>
+                        <td style="font-size: 10.5px; color: var(--wire-subtext);">15 / 60</td>
+                        <td>Rp 65.000</td>
+                        <td><strong>Rp 75.000</strong></td>
+                        <td style="text-align: center; font-weight: bold; cursor: pointer;">•••</td>
+                      </tr>
+                      <!-- Row 4 -->
+                      <tr style="background: #f8fafc;">
+                        <td><div class="wf-placeholder-img" style="width: 32px; height: 32px; border-radius: 4px; font-size: 8.5px;">Foto</div></td>
+                        <td><strong>ALDERON RS TRIMDECK</strong><br/><span style="font-size: 9.5px; color: var(--wire-subtext); font-family: monospace;">BRG-782910384</span></td>
+                        <td><span class="wf-badge">Atap & Seng</span></td>
+                        <td style="text-align: center;"><span class="wf-badge" style="background: #475569; color: #fff; font-weight: bold;">B</span></td>
+                        <td><strong>18 LEMBAR</strong></td>
+                        <td style="font-size: 10.5px; color: var(--wire-subtext);">10 / 40</td>
+                        <td>Rp 260.000</td>
+                        <td><strong>Rp 300.000</strong></td>
+                        <td style="text-align: center; font-weight: bold; cursor: pointer;">•••</td>
+                      </tr>
+                      <!-- Row 5 -->
+                      <tr>
+                        <td><div class="wf-placeholder-img" style="width: 32px; height: 32px; border-radius: 4px; font-size: 8.5px;">Foto</div></td>
+                        <td><strong>CAT DULUX PURE WHITE 5KG</strong><br/><span style="font-size: 9.5px; color: var(--wire-subtext); font-family: monospace;">BRG-551928371</span></td>
+                        <td><span class="wf-badge">Cat & Pelapis</span></td>
+                        <td style="text-align: center;"><span class="wf-badge" style="background: #475569; color: #fff; font-weight: bold;">B</span></td>
+                        <td><strong>8 GALON</strong></td>
+                        <td style="font-size: 10.5px; color: var(--wire-subtext);">5 / 25</td>
+                        <td>Rp 175.000</td>
+                        <td><strong>Rp 195.000</strong></td>
+                        <td style="text-align: center; font-weight: bold; cursor: pointer;">•••</td>
+                      </tr>
+                      <!-- Row 6 -->
+                      <tr style="background: #f8fafc;">
+                        <td><div class="wf-placeholder-img" style="width: 32px; height: 32px; border-radius: 4px; font-size: 8.5px;">Foto</div></td>
+                        <td><strong>PAKU KAYU 3 INCH (KG)</strong><br/><span style="font-size: 9.5px; color: var(--wire-subtext); font-family: monospace;">BRG-992104829</span></td>
+                        <td><span class="wf-badge">Pertukangan</span></td>
+                        <td style="text-align: center;"><span class="wf-badge" style="background: #94a3b8; color: #fff; font-weight: bold;">C</span></td>
+                        <td><strong>85 KG</strong></td>
+                        <td style="font-size: 10.5px; color: var(--wire-subtext);">20 / 100</td>
+                        <td>Rp 18.000</td>
+                        <td><strong>Rp 22.000</strong></td>
+                        <td style="text-align: center; font-weight: bold; cursor: pointer;">•••</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- SUB-TAB 2: KLASIFIKASI ABC & STOK MIN-MAX (MONOCHROME PALETTE) -->
+              <div id="inv-abc" class="sub-tab-content" style="display: none;">
+                
+                <!-- Title & Action Buttons Row -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <h2 style="font-size: 15px; font-weight: 900; color: #0f172a;">Klasifikasi ABC & Stok Min-Max</h2>
+                  <div style="display: flex; gap: 6px; align-items: center;">
+                    <button class="wf-btn wf-btn-outline" style="font-size: 11px; padding: 4px 8px; border-color: #000; color: #000;">Setting</button>
+                    <select class="wf-input" style="font-size: 11px; padding: 3px 6px; width: 140px; background: #fff; border-color: #000;">
+                      <option>3 Bulan (90 Hari)</option>
+                    </select>
+                    <button class="wf-btn wf-btn-outline" style="font-size: 11px; padding: 4px 8px; border-color: #000; color: #000;">Hitung Ulang (10j lalu)</button>
+                    <button class="wf-btn wf-btn-outline" style="font-size: 11px; padding: 4px 8px; color: #000000; border-color: #000000; font-weight: 700;">Excel</button>
+                  </div>
+                </div>
+
+                <!-- 3 Category ABC Pareto Cards Grid (Monochrome) -->
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 8px;">
+                  
+                  <!-- Card A -->
+                  <div class="kpi-card" style="padding: 8px 10px; background: #fff; border: 1.5px solid var(--wire-border-dark);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <span style="font-size: 11px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 4px;">
+                        <span class="wf-badge" style="background: #0f172a; color: #ffffff; border-color: #000000; font-weight: 800; padding: 1px 5px;">A</span> Kategori A
+                      </span>
+                      <span class="wf-badge" style="background: #f4f4f5; color: #000000; border-color: #000000; font-size: 10px; font-weight: 700;">81% Nilai</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 6px;">
+                      <div style="font-size: 16px; font-weight: 900; color: #0f172a;">45 <span style="font-size: 10px; font-weight: 600; color: var(--wire-subtext);">Produk</span></div>
+                      <div style="font-size: 13px; font-weight: 800; color: #0f172a;">Rp 447.527.286</div>
+                    </div>
+                    <div style="font-size: 9.5px; color: var(--wire-subtext); margin-top: 4px;">0 - 80% Nilai Penjualan</div>
+                    <div style="height: 4px; width: 100%; background: #e2e8f0; border-radius: 2px; margin-top: 6px; overflow: hidden;">
+                      <div style="height: 100%; width: 81%; background: #000000; border-radius: 2px;"></div>
+                    </div>
+                  </div>
+
+                  <!-- Card B -->
+                  <div class="kpi-card" style="padding: 8px 10px; background: #fff; border: 1.5px solid var(--wire-border-dark);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <span style="font-size: 11px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 4px;">
+                        <span class="wf-badge" style="background: #475569; color: #ffffff; border-color: #000000; font-weight: 800; padding: 1px 5px;">B</span> Kategori B
+                      </span>
+                      <span class="wf-badge" style="background: #f4f4f5; color: #000000; border-color: #000000; font-size: 10px; font-weight: 700;">15% Nilai</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 6px;">
+                      <div style="font-size: 16px; font-weight: 900; color: #0f172a;">97 <span style="font-size: 10px; font-weight: 600; color: var(--wire-subtext);">Produk</span></div>
+                      <div style="font-size: 13px; font-weight: 800; color: #8492a6;">Rp 84.395.610</div>
+                    </div>
+                    <div style="font-size: 9.5px; color: var(--wire-subtext); margin-top: 4px;">80 - 95% Nilai Penjualan</div>
+                    <div style="height: 4px; width: 100%; background: #e2e8f0; border-radius: 2px; margin-top: 6px; overflow: hidden;">
+                      <div style="height: 100%; width: 15%; background: #475569; border-radius: 2px;"></div>
+                    </div>
+                  </div>
+
+                  <!-- Card C -->
+                  <div class="kpi-card" style="padding: 8px 10px; background: #fff; border: 1.5px solid var(--wire-border-dark);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <span style="font-size: 11px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 4px;">
+                        <span class="wf-badge" style="background: #94a3b8; color: #ffffff; border-color: #000000; font-weight: 800; padding: 1px 5px;">C</span> Kategori C
+                      </span>
+                      <span class="wf-badge" style="background: #f4f4f5; color: #000000; border-color: #000000; font-size: 10px; font-weight: 700;">4% Nilai</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 6px;">
+                      <div style="font-size: 16px; font-weight: 900; color: #0f172a;">450 <span style="font-size: 10px; font-weight: 600; color: var(--wire-subtext);">Produk</span></div>
+                      <div style="font-size: 13px; font-weight: 800; color: #94a3b8;">Rp 20.067.321</div>
+                    </div>
+                    <div style="font-size: 9.5px; color: var(--wire-subtext); margin-top: 4px;">95 - 100% Nilai Penjualan</div>
+                    <div style="height: 4px; width: 100%; background: #e2e8f0; border-radius: 2px; margin-top: 6px; overflow: hidden;">
+                      <div style="height: 100%; width: 4%; background: #94a3b8; border-radius: 2px;"></div>
+                    </div>
+                  </div>
+
+                </div>
+
+                <!-- Filter & Controls Bar (Monochrome) -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px; background: #fff; padding: 6px 10px; border: 1.5px solid var(--wire-border-dark); border-radius: 6px;">
+                  <input type="text" class="wf-input" placeholder="Cari kode atau nama..." value="" style="font-size: 11px; max-width: 220px; padding: 4px 8px; border-color: #000;" readonly />
+                  <div style="display: flex; gap: 12px; align-items: center;">
+                    <label style="font-size: 11px; cursor: pointer;"><input type="checkbox" disabled /> Hanya yang berubah (0)</label>
+                    <label style="font-size: 11px; cursor: pointer; font-weight: 600; color: #000000;"><input type="checkbox" checked disabled /> Update Min Stock</label>
+                    <label style="font-size: 11px; cursor: pointer; font-weight: 600; color: #000000;"><input type="checkbox" checked disabled /> Update Max Stock</label>
+                    <button class="wf-btn wf-btn-primary" style="font-size: 11px; padding: 4px 10px; background: #000000; border-color: #000000; color: #ffffff;">Terapkan (0) • 1h lalu</button>
+                  </div>
+                </div>
+
+                <!-- Data Table (Monochrome) -->
+                <div>
+                  <table class="wf-table" style="background: #ffffff;">
+                    <thead>
+                      <tr>
+                        <th style="width: 30px; text-align: center;"><input type="checkbox" disabled /></th>
+                        <th style="width: 30px;">No</th>
+                        <th>Produk</th>
+                        <th style="width: 60px; text-align: center;">Kategori</th>
+                        <th>Nilai HPP (FIFO)</th>
+                        <th>Kumulatif</th>
+                        <th>Avg Demand</th>
+                        <th>Lead Time</th>
+                        <th>Stok Fisik</th>
+                        <th>Rec. Min</th>
+                        <th>Rec. Max</th>
+                        <th style="width: 30px; text-align: center;">...</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <!-- Row 1 -->
+                      <tr>
+                        <td style="text-align: center;"><input type="checkbox" disabled /></td>
+                        <td>1</td>
+                        <td>
+                          <strong>SEMEN GARUDA 40KG</strong><br/>
+                          <span style="font-size: 9.5px; color: var(--wire-subtext); font-family: monospace;">BRG-412556522</span>
+                        </td>
+                        <td style="text-align: center;">
+                          <span class="wf-badge" style="background: #0f172a; color: #ffffff; border-color: #000000; font-weight: 800;">A</span>
+                        </td>
+                        <td>Rp 80.047.188</td>
+                        <td style="font-size: 10px;"><strong>14.29%</strong> <span style="color: var(--wire-subtext);">(14.29%)</span></td>
+                        <td><strong>670.43</strong> <span style="font-size: 10px; color: var(--wire-subtext);">unit/hr</span></td>
+                        <td>2 hr</td>
+                        <td><strong>121 ZAK</strong></td>
+                        <td><strong style="color: #000000;">68 ZAK</strong></td>
+                        <td><strong style="color: #475569;">302 ZAK</strong></td>
+                        <td style="text-align: center; font-weight: bold; cursor: pointer;">•••</td>
+                      </tr>
+
+                      <!-- Row 2 -->
+                      <tr>
+                        <td style="text-align: center;"><input type="checkbox" disabled /></td>
+                        <td>2</td>
+                        <td>
+                          <strong>BATA RINGAN / HEBEL 10</strong><br/>
+                          <span style="font-size: 9.5px; color: var(--wire-subtext); font-family: monospace;">BRG-285062218</span>
+                        </td>
+                        <td style="text-align: center;">
+                          <span class="wf-badge" style="background: #0f172a; color: #ffffff; border-color: #000000; font-weight: 800;">A</span>
+                        </td>
+                        <td>Rp 79.287.713</td>
+                        <td style="font-size: 10px;"><strong>28.44%</strong> <span style="color: var(--wire-subtext);">(14.15%)</span></td>
+                        <td><strong>132.16</strong> <span style="font-size: 10px; color: var(--wire-subtext);">unit/hr</span></td>
+                        <td>3 hr</td>
+                        <td><strong style="color: #000000;">1 KUBIK</strong></td>
+                        <td><strong style="color: #000000;">7 KUBIK</strong></td>
+                        <td><strong style="color: #475569;">29 KUBIK</strong></td>
+                        <td style="text-align: center; font-weight: bold; cursor: pointer;">•••</td>
+                      </tr>
+
+                      <!-- Row 3 -->
+                      <tr style="background: #f8fafc;">
+                        <td style="text-align: center;"><input type="checkbox" disabled /></td>
+                        <td>3</td>
+                        <td>
+                          <strong>SEMEN RAJAWALI 40KG</strong><br/>
+                          <span style="font-size: 9.5px; color: var(--wire-subtext); font-family: monospace;">BRG-364860575</span>
+                        </td>
+                        <td style="text-align: center;">
+                          <span class="wf-badge" style="background: #0f172a; color: #ffffff; border-color: #000000; font-weight: 800;">A</span>
+                        </td>
+                        <td>Rp 35.196.423</td>
+                        <td style="font-size: 10px;"><strong>34.73%</strong> <span style="color: var(--wire-subtext);">(6.28%)</span></td>
+                        <td><strong>191.67</strong> <span style="font-size: 10px; color: var(--wire-subtext);">unit/hr</span></td>
+                        <td>3 hr</td>
+                        <td><strong style="color: #000000;">0 ZAK</strong></td>
+                        <td><strong style="color: #000000;">20 ZAK</strong></td>
+                        <td><strong style="color: #475569;">87 ZAK</strong></td>
+                        <td style="text-align: center; font-weight: bold; cursor: pointer;">•••</td>
+                      </tr>
+
+                      <!-- Row 4 -->
+                      <tr>
+                        <td style="text-align: center;"><input type="checkbox" disabled /></td>
+                        <td>4</td>
+                        <td>
+                          <strong>PASIR PASANG</strong><br/>
+                          <span style="font-size: 9.5px; color: var(--wire-subtext); font-family: monospace;">BRG-364961989</span>
+                        </td>
+                        <td style="text-align: center;">
+                          <span class="wf-badge" style="background: #0f172a; color: #ffffff; border-color: #000000; font-weight: 800;">A</span>
+                        </td>
+                        <td>Rp 20.679.444</td>
+                        <td style="font-size: 10px;"><strong>38.42%</strong> <span style="color: var(--wire-subtext);">(3.69%)</span></td>
+                        <td><strong>29.71</strong> <span style="font-size: 10px; color: var(--wire-subtext);">unit/hr</span></td>
+                        <td>3 hr</td>
+                        <td><strong>1 TRUK</strong></td>
+                        <td><strong style="color: #000000;">1 TRUK</strong></td>
+                        <td><strong style="color: #475569;">2 TRUK</strong></td>
+                        <td style="text-align: center; font-weight: bold; cursor: pointer;">•••</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+              </div>
+
+              <!-- SUB-TAB 3: REKOMENDASI RESTOCK (100% STRICT MONOCHROME & ZERO ICONS) -->
+              <div id="inv-restock" class="sub-tab-content" style="display: none;">
+                
+                <!-- Title & Action Buttons Row -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <h2 style="font-size: 14px; font-weight: 900; color: #0f172a;">Rekomendasi Restock</h2>
+                  <button class="wf-btn wf-btn-outline" style="font-size: 10.5px; padding: 3px 8px; color: #000000; border-color: #000000; font-weight: 700;">Excel</button>
+                </div>
+
+                <!-- 3 KPI Cards Grid (Monochrome) -->
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 6px;">
+                  
+                  <!-- Card 1: SKU Butuh Restock -->
+                  <div class="kpi-card" style="padding: 6px 10px; background: #fff; border: 1.5px solid var(--wire-border-dark);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <span style="font-size: 10.5px; font-weight: 700; color: var(--wire-subtext);">SKU Butuh Restock</span>
+                      <span class="wf-badge" style="background: #f4f4f5; color: #000000; border-color: #000000; font-size: 9.5px; font-weight: 800;">188 SKU</span>
+                    </div>
+                    <div style="font-size: 15px; font-weight: 900; color: #0f172a; margin-top: 3px;">188 <span style="font-size: 10px; font-weight: 700; color: var(--wire-subtext);">SKU</span></div>
+                    <div style="font-size: 9px; color: var(--wire-subtext); margin-top: 1px;">Produk berada di bawah batas stok minimum</div>
+                  </div>
+
+                  <!-- Card 2: Total Unit Restock -->
+                  <div class="kpi-card" style="padding: 6px 10px; background: #fff; border: 1.5px solid var(--wire-border-dark);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <span style="font-size: 10.5px; font-weight: 700; color: var(--wire-subtext);">Total Unit Restock</span>
+                      <span class="wf-badge" style="background: #f4f4f5; color: #000000; border-color: #000000; font-size: 9.5px; font-weight: 800;">Target Max</span>
+                    </div>
+                    <div style="font-size: 15px; font-weight: 900; color: #0f172a; margin-top: 3px;">8.868 <span style="font-size: 10px; font-weight: 700; color: var(--wire-subtext);">Unit</span></div>
+                    <div style="font-size: 9px; color: var(--wire-subtext); margin-top: 1px;">Total estimasi unit menuju batas kapasitas</div>
+                  </div>
+
+                  <!-- Card 3: Estimasi Biaya -->
+                  <div class="kpi-card" style="padding: 6px 10px; background: #fff; border: 1.5px solid var(--wire-border-dark);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <span style="font-size: 10.5px; font-weight: 700; color: var(--wire-subtext);">Estimasi Biaya</span>
+                      <span class="wf-badge" style="background: #f4f4f5; color: #000000; border-color: #000000; font-size: 9.5px; font-weight: 800;">Modal</span>
+                    </div>
+                    <div style="font-size: 15px; font-weight: 900; color: #0f172a; margin-top: 3px;">Rp 156.702.694</div>
+                    <div style="font-size: 9px; color: var(--wire-subtext); margin-top: 1px;">Estimasi anggaran pembelian ke pemasok</div>
+                  </div>
+
+                </div>
+
+                <!-- Filter & Search Controls Bar -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; gap: 6px; background: #fff; padding: 4px 8px; border: 1.5px solid var(--wire-border-dark); border-radius: 6px;">
+                  <input type="text" class="wf-input" placeholder="Cari SKU atau nama..." readonly style="font-size: 10px; width: 180px; padding: 3px 6px; border-color: #000;" />
+                  <div style="display: flex; gap: 6px; align-items: center;">
+                    <select class="wf-input" style="font-size: 10px; padding: 3px 6px; border-color: #000; background: #fff;"><option>Semua Kategori</option></select>
+                    <select class="wf-input" style="font-size: 10px; padding: 3px 6px; border-color: #000; background: #fff;"><option>Semua Pemasok</option></select>
+                    <select class="wf-input" style="font-size: 10px; padding: 3px 6px; border-color: #000; background: #fff;"><option>Semua ABC</option></select>
+                    <select class="wf-input" style="font-size: 10px; padding: 3px 6px; border-color: #000; background: #fff;"><option>Urutkan: Paling Terdesak</option></select>
+                  </div>
+                </div>
+
+                <!-- Table (Monochrome & No Icons) -->
+                <div style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+                  <table class="wf-table" style="background: #ffffff; width: 100%;">
+                    <thead>
+                      <tr>
+                        <th>Prioritas</th>
+                        <th>Nama Produk</th>
+                        <th>Pemasok</th>
+                        <th style="text-align: center;">ABC</th>
+                        <th>Stok Fisik</th>
+                        <th>Target Max</th>
+                        <th>Saran Order</th>
+                        <th style="text-align: right;">Est. Modal</th>
+                        <th style="text-align: center;">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><span class="wf-badge" style="background: #000000; color: #ffffff; border-color: #000000;">Habis (0)</span></td>
+                        <td>
+                          <strong>SEMEN RAJAWALI 40KG</strong><br/>
+                          <span style="font-size: 9px; color: var(--wire-subtext); font-family: monospace;">BRG-364860575 • Semen</span>
+                        </td>
+                        <td>PT LANGGENG JAYA NIR...</td>
+                        <td style="text-align: center;"><span class="wf-badge" style="background: #000000; color: #ffffff; border-color: #000000; font-weight: 800;">A</span></td>
+                        <td><strong>0 ZAK</strong></td>
+                        <td>3451</td>
+                        <td style="font-weight: 800; color: #000000;">+3451</td>
+                        <td style="text-align: right; font-weight: 800;">Rp 4.137.329</td>
+                        <td style="text-align: center;"><button class="wf-btn wf-btn-primary" style="background: #000000; border-color: #000000; font-size: 10px; padding: 2px 8px;">Restock</button></td>
+                      </tr>
+                      <tr style="background: #f8fafc;">
+                        <td><span class="wf-badge" style="background: #1e293b; color: #ffffff; border-color: #000000;">Kritis (A)</span></td>
+                        <td>
+                          <strong>BATA RINGAN / HEBEL 10</strong><br/>
+                          <span style="font-size: 9px; color: var(--wire-subtext); font-family: monospace;">BRG-285062218 • BAHAN KONTRUKSI</span>
+                        </td>
+                        <td>PUTRA AGUNG HEBEL</td>
+                        <td style="text-align: center;"><span class="wf-badge" style="background: #000000; color: #ffffff; border-color: #000000; font-weight: 800;">A</span></td>
+                        <td><strong>0.2 KUBIK</strong></td>
+                        <td>2380</td>
+                        <td style="font-weight: 800; color: #000000;">+2367</td>
+                        <td style="text-align: right; font-weight: 800;">Rp 15.576.400</td>
+                        <td style="text-align: center;"><button class="wf-btn wf-btn-primary" style="background: #000000; border-color: #000000; font-size: 10px; padding: 2px 8px;">Restock</button></td>
+                      </tr>
+                      <tr>
+                        <td><span class="wf-badge" style="background: #475569; color: #ffffff; border-color: #000000;">Menipis (B)</span></td>
+                        <td>
+                          <strong>PAKU 7</strong><br/>
+                          <span style="font-size: 9px; color: var(--wire-subtext); font-family: monospace;">BRG-720690637 • PAKU & SKRUP</span>
+                        </td>
+                        <td>PT LANGGENG JAYA NIR...</td>
+                        <td style="text-align: center;"><span class="wf-badge" style="background: #475569; color: #ffffff; border-color: #000000; font-weight: 800;">B</span></td>
+                        <td><strong>0 BOX</strong></td>
+                        <td>83</td>
+                        <td style="font-weight: 800; color: #000000;">+81</td>
+                        <td style="text-align: right; font-weight: 800;">Rp 297.413</td>
+                        <td style="text-align: center;"><button class="wf-btn wf-btn-primary" style="background: #000000; border-color: #000000; font-size: 10px; padding: 2px 8px;">Restock</button></td>
+                      </tr>
+                      <tr style="background: #f8fafc;">
+                        <td><span class="wf-badge" style="background: #475569; color: #ffffff; border-color: #000000;">Menipis (B)</span></td>
+                        <td>
+                          <strong>PAKU 10</strong><br/>
+                          <span style="font-size: 9px; color: var(--wire-subtext); font-family: monospace;">BRG-825625365 • PAKU & SKRUP</span>
+                        </td>
+                        <td>PT LANGGENG JAYA NIR...</td>
+                        <td style="text-align: center;"><span class="wf-badge" style="background: #475569; color: #ffffff; border-color: #000000; font-weight: 800;">B</span></td>
+                        <td><strong>0 BOX</strong></td>
+                        <td>70</td>
+                        <td style="font-weight: 800; color: #000000;">+69</td>
+                        <td style="text-align: right; font-weight: 800;">Rp 248.400</td>
+                        <td style="text-align: center;"><button class="wf-btn wf-btn-primary" style="background: #000000; border-color: #000000; font-size: 10px; padding: 2px 8px;">Restock</button></td>
+                      </tr>
+                      <tr>
+                        <td><span class="wf-badge" style="background: #475569; color: #ffffff; border-color: #000000;">Menipis (B)</span></td>
+                        <td>
+                          <strong>KOMPON</strong><br/>
+                          <span style="font-size: 9px; color: var(--wire-subtext); font-family: monospace;">BRG-365230351 • Semen</span>
+                        </td>
+                        <td>PT LANGGENG JAYA NIR...</td>
+                        <td style="text-align: center;"><span class="wf-badge" style="background: #475569; color: #ffffff; border-color: #000000; font-weight: 800;">B</span></td>
+                        <td><strong>0.8 ZAK</strong></td>
+                        <td>74</td>
+                        <td style="font-weight: 800; color: #000000;">+59</td>
+                        <td style="text-align: right; font-weight: 800;">Rp 182.730</td>
+                        <td style="text-align: center;"><button class="wf-btn wf-btn-primary" style="background: #000000; border-color: #000000; font-size: 10px; padding: 2px 8px;">Restock</button></td>
+                      </tr>
+                      <tr style="background: #f8fafc;">
+                        <td><span class="wf-badge" style="background: #000000; color: #ffffff; border-color: #000000;">Habis (0)</span></td>
+                        <td>
+                          <strong>SILTIP ONDA</strong><br/>
+                          <span style="font-size: 9px; color: var(--wire-subtext); font-family: monospace;">BRG-910283741 • PERTUKANGAN</span>
+                        </td>
+                        <td>PT LANGGENG JAYA NIR...</td>
+                        <td style="text-align: center;"><span class="wf-badge" style="background: #94a3b8; color: #ffffff; border-color: #000000; font-weight: 800;">C</span></td>
+                        <td><strong>0 PCS</strong></td>
+                        <td>11</td>
+                        <td style="font-weight: 800; color: #000000;">+11</td>
+                        <td style="text-align: right; font-weight: 800;">Rp 31.680</td>
+                        <td style="text-align: center;"><button class="wf-btn wf-btn-primary" style="background: #000000; border-color: #000000; font-size: 10px; padding: 2px 8px;">Restock</button></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+              </div>
+
+              <!-- SUB-TAB 4: RIWAYAT MUTASI (100% STRICT MONOCHROME & ZERO ICONS) -->
+              <div id="inv-mutasi" class="sub-tab-content" style="display: block;">
+                
+                <!-- Filter & Controls Bar (Monochrome & No Icons) -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; gap: 6px; background: #fff; padding: 4px 8px; border: 1.5px solid var(--wire-border-dark); border-radius: 6px;">
+                  <input type="text" class="wf-input" placeholder="Cari SKU, Nama, atau Keterangan..." readonly style="font-size: 10px; width: 220px; padding: 3px 6px; border-color: #000;" />
+                  <div style="display: flex; gap: 6px; align-items: center;">
+                    <select class="wf-input" style="font-size: 10px; padding: 3px 6px; border-color: #000; background: #fff;"><option>Semua Mutasi</option></select>
+                    <select class="wf-input" style="font-size: 10px; padding: 3px 6px; border-color: #000; background: #fff;"><option>Semua Kategori</option></select>
+                    <select class="wf-input" style="font-size: 10px; padding: 3px 6px; border-color: #000; background: #fff;"><option>3 Bulan Terakhir</option></select>
+                    <button class="wf-btn wf-btn-outline" style="font-size: 10.5px; padding: 3px 8px; color: #000000; border-color: #000000; font-weight: 700;">Excel</button>
+                  </div>
+                </div>
+
+                <!-- Table (Monochrome & Zero Icons) -->
+                <div style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+                  <table class="wf-table" style="background: #ffffff; width: 100%;">
+                    <thead>
+                      <tr>
+                        <th>Waktu Transaksi</th>
+                        <th style="text-align: center;">Tipe Mutasi</th>
+                        <th>Nama Produk</th>
+                        <th>Kategori</th>
+                        <th style="text-align: right;">Perubahan Qty</th>
+                        <th>Keterangan / Alasan</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>19 Agu 2026, 15.48</td>
+                        <td style="text-align: center;"><span class="wf-badge" style="background: #000000; color: #ffffff; border-color: #000000;">(OUT)</span></td>
+                        <td>
+                          <strong>AQUAPROOF PUTIH 1 KG</strong><br/>
+                          <span style="font-size: 9px; color: var(--wire-subtext); font-family: monospace;">BRG-100429960</span>
+                        </td>
+                        <td><span class="wf-badge" style="background: #f4f4f5; color: #000; border-color: #cbd5e1;">PELAPIS ANTI BOCOR</span></td>
+                        <td style="text-align: right; font-weight: 800; color: #000000;">-1 KG</td>
+                        <td>Penjualan INV-20260819-002</td>
+                      </tr>
+                      <tr style="background: #f8fafc;">
+                        <td>19 Agu 2026, 15.48</td>
+                        <td style="text-align: center;"><span class="wf-badge" style="background: #000000; color: #ffffff; border-color: #000000;">(OUT)</span></td>
+                        <td>
+                          <strong>AQUAPROOF PUTIH 1 KG</strong><br/>
+                          <span style="font-size: 9px; color: var(--wire-subtext); font-family: monospace;">BRG-100429960</span>
+                        </td>
+                        <td><span class="wf-badge" style="background: #f4f4f5; color: #000; border-color: #cbd5e1;">PELAPIS ANTI BOCOR</span></td>
+                        <td style="text-align: right; font-weight: 800; color: #000000;">-1 KG</td>
+                        <td>Penjualan INV-20260819-001</td>
+                      </tr>
+                      <tr>
+                        <td>19 Agu 2026, 15.15</td>
+                        <td style="text-align: center;"><span class="wf-badge" style="background: #334155; color: #ffffff; border-color: #000000;">(IN)</span></td>
+                        <td>
+                          <strong>AA</strong><br/>
+                          <span style="font-size: 9px; color: var(--wire-subtext); font-family: monospace;">BRG-331771440</span>
+                        </td>
+                        <td><span class="wf-badge" style="background: #f4f4f5; color: #000; border-color: #cbd5e1;">ASBES</span></td>
+                        <td style="text-align: right; font-weight: 800; color: #000000;">+1 KG</td>
+                        <td>Stok Awal (Input Manual)</td>
+                      </tr>
+                      <tr style="background: #f8fafc;">
+                        <td>18 Agu 2026, 10.38</td>
+                        <td style="text-align: center;"><span class="wf-badge" style="background: #000000; color: #ffffff; border-color: #000000;">(OUT)</span></td>
+                        <td>
+                          <strong>SELANG WATERPLASH 1/4"</strong><br/>
+                          <span style="font-size: 9px; color: var(--wire-subtext); font-family: monospace;">BRG-347605811</span>
+                        </td>
+                        <td><span class="wf-badge" style="background: #f4f4f5; color: #000; border-color: #cbd5e1;">SELANG</span></td>
+                        <td style="text-align: right; font-weight: 800; color: #000000;">-15 METER</td>
+                        <td>Penjualan INV-20260818-024</td>
+                      </tr>
+                      <tr>
+                        <td>18 Agu 2026, 10.38</td>
+                        <td style="text-align: center;"><span class="wf-badge" style="background: #000000; color: #ffffff; border-color: #000000;">(OUT)</span></td>
+                        <td>
+                          <strong>BENANG</strong><br/>
+                          <span style="font-size: 9px; color: var(--wire-subtext); font-family: monospace;">BRG-65536914</span>
+                        </td>
+                        <td><span class="wf-badge" style="background: #f4f4f5; color: #000; border-color: #cbd5e1;">PERKAKAS</span></td>
+                        <td style="text-align: right; font-weight: 800; color: #000000;">-2 PCS</td>
+                        <td>Penjualan INV-20260818-024</td>
+                      </tr>
+                      <tr style="background: #f8fafc;">
+                        <td>18 Agu 2026, 10.31</td>
+                        <td style="text-align: center;"><span class="wf-badge" style="background: #000000; color: #ffffff; border-color: #000000;">(OUT)</span></td>
+                        <td>
+                          <strong>ZIRCON SHG 131 0.8 LITER ( MERAH )</strong><br/>
+                          <span style="font-size: 9px; color: var(--wire-subtext); font-family: monospace;">BRG-520598892</span>
+                        </td>
+                        <td><span class="wf-badge" style="background: #f4f4f5; color: #000; border-color: #cbd5e1;">CAT</span></td>
+                        <td style="text-align: right; font-weight: 800; color: #000000;">-1 KG</td>
+                        <td>Penjualan INV-20260818-023</td>
+                      </tr>
+                      <tr>
+                        <td>18 Agu 2026, 10.31</td>
+                        <td style="text-align: center;"><span class="wf-badge" style="background: #000000; color: #ffffff; border-color: #000000;">(OUT)</span></td>
+                        <td>
+                          <strong>THINER BOTOL</strong><br/>
+                          <span style="font-size: 9px; color: var(--wire-subtext); font-family: monospace;">BRG-295406195</span>
+                        </td>
+                        <td><span class="wf-badge" style="background: #f4f4f5; color: #000; border-color: #cbd5e1;">PELENGKAP CAT</span></td>
+                        <td style="text-align: right; font-weight: 800; color: #000000;">-2 PCS</td>
+                        <td>Penjualan INV-20260818-023</td>
+                      </tr>
+                      <tr style="background: #f8fafc;">
+                        <td>18 Agu 2026, 10.31</td>
+                        <td style="text-align: center;"><span class="wf-badge" style="background: #000000; color: #ffffff; border-color: #000000;">(OUT)</span></td>
+                        <td>
+                          <strong>KUAS 2 1/2" BIASA</strong><br/>
+                          <span style="font-size: 9px; color: var(--wire-subtext); font-family: monospace;">BRG-879859720</span>
+                        </td>
+                        <td><span class="wf-badge" style="background: #f4f4f5; color: #000; border-color: #cbd5e1;">PELENGKAP CAT</span></td>
+                        <td style="text-align: right; font-weight: 800; color: #000000;">-1 PCS</td>
+                        <td>Penjualan INV-20260818-023</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ==================== WIREFRAME 6: LAPORAN PENJUALAN ==================== -->
+    <div id="wf-reports" class="wireframe-view">
+      <div class="wf-canvas">
+        <div class="app-shell">
+          <!-- Sidebar -->
+          <div class="app-sidebar">
+            <div>
+              <div class="sidebar-brand" onclick="switchTab('wf-pos')" style="display: flex; align-items: center; gap: 8px;">
+                <span>🏪</span> Retail Kecil Menengah
+              </div>
+              <div style="font-size: 10px; color: var(--wire-subtext); margin: 8px 0 4px 2px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Main Menu</div>
+              <div class="sidebar-menu">
+                <div class="menu-item" onclick="switchTab('wf-pos')">
+                  <span>🛒</span> Point of Sale (POS)
+                </div>
+                <div class="menu-item" onclick="switchTab('wf-dashboard')">
+                  <span>🔲</span> Dashboard
+                </div>
+                <div class="menu-item" onclick="switchTab('wf-inventory')">
+                  <span>📦</span> Inventory
+                </div>
+                <div class="menu-item active" onclick="switchTab('wf-reports')">
+                  <span>📄</span> Laporan
+                </div>
+              </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <div class="menu-item" onclick="switchTab('wf-pos')">
+                <span>⚙️</span> Pengaturan
+              </div>
+              <div style="font-size: 11px; padding: 8px; border: 1.5px solid var(--wire-border-dark); border-radius: 6px; background: #fff; display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <div style="width: 28px; height: 28px; border-radius: 50%; background: #0f172a; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 10px;">MT</div>
+                  <div>
+                    <strong style="font-size: 11px; display: block; line-height: 1.1;">Manager Toko</strong>
+                    <span style="color: var(--wire-subtext); font-size: 9.5px; font-weight: 700;">MANAGER</span>
+                  </div>
+                </div>
+                <span style="cursor: pointer; font-weight: 900; color: #64748b;">⋮</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main Reports Content -->
+          <div class="app-main">
+            <!-- Header Bar -->
+            <div class="app-header">
+              <div style="font-weight: 900; font-size: 16px; color: #0f172a;">Laporan Penjualan</div>
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <select class="wf-input" style="font-size: 11px; padding: 4px 8px; background: #fff; width: 140px; border-color: #000;">
+                  <option>30 Hari Terakhir</option>
+                  <option>Bulan Ini</option>
+                </select>
+                <button class="wf-btn wf-btn-outline" style="font-size: 11px; padding: 4px 8px; border-color: #000; color: #000;">Hitung Ulang</button>
+                <button class="wf-btn wf-btn-outline" style="font-size: 11px; padding: 4px 8px; border-color: #000; color: #000; font-weight: 700;">Excel</button>
+                <button class="wf-btn wf-btn-primary" style="font-size: 11px; padding: 4px 10px; background: #000000; border-color: #000000;">Export PDF</button>
+              </div>
+            </div>
+
+            <div class="app-body" style="background: #fafafa; padding: 10px; display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0;">
+              
+              <!-- 4 KPI Cards Grid -->
+              <div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 0; flex: 0 0 auto;">
+                
+                <div class="kpi-card" style="padding: 8px 10px; background: #fff;">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 10.5px; color: var(--wire-subtext); font-weight: 700;">Total Omzet</span>
+                    <span class="wf-badge" style="background: #f4f4f5; color: #000; border-color: #000; font-weight: 700; font-size: 9.5px;">+12.5%</span>
+                  </div>
+                  <div style="font-size: 15px; font-weight: 900; color: #0f172a; margin-top: 3px;">Rp 163.195.502</div>
+                  <div style="font-size: 9.5px; color: var(--wire-subtext); margin-top: 1px;">Total omzet kotor periode ini</div>
+                </div>
+
+                <div class="kpi-card" style="padding: 8px 10px; background: #fff;">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 10.5px; color: var(--wire-subtext); font-weight: 700;">Estimasi Laba</span>
+                    <span class="wf-badge" style="background: #f4f4f5; color: #000; border-color: #000; font-weight: 700; font-size: 9.5px;">+24%</span>
+                  </div>
+                  <div style="font-size: 15px; font-weight: 900; color: #0f172a; margin-top: 3px;">Rp 38.894.207</div>
+                  <div style="font-size: 9.5px; color: var(--wire-subtext); margin-top: 1px;">Laba bersih dari estimasi HPP</div>
+                </div>
+
+                <div class="kpi-card" style="padding: 8px 10px; background: #fff;">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 10.5px; color: var(--wire-subtext); font-weight: 700;">Total Transaksi</span>
+                    <span class="wf-badge" style="background: #f4f4f5; color: #000; border-color: #000; font-weight: 700; font-size: 9.5px;">+12.5%</span>
+                  </div>
+                  <div style="font-size: 15px; font-weight: 900; color: #0f172a; margin-top: 3px;">605 <span style="font-size: 10px; font-weight: 600; color: var(--wire-subtext);">Trx</span></div>
+                  <div style="font-size: 9.5px; color: var(--wire-subtext); margin-top: 1px;">AOV: <strong>Rp 269.745</strong></div>
+                </div>
+
+                <div class="kpi-card" style="padding: 8px 10px; background: #fff;">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 10.5px; color: var(--wire-subtext); font-weight: 700;">Produk Terjual</span>
+                    <span class="wf-badge" style="background: #f4f4f5; color: #000; border-color: #000; font-weight: 700; font-size: 9.5px;">+4.5%</span>
+                  </div>
+                  <div style="font-size: 15px; font-weight: 900; color: #0f172a; margin-top: 3px;">32993 <span style="font-size: 10px; font-weight: 600; color: var(--wire-subtext);">Pcs</span></div>
+                  <div style="font-size: 9.5px; color: var(--wire-subtext); margin-top: 1px;">Terdistribusi <strong>274 varian</strong> item</div>
+                </div>
+
+              </div>
+
+              <!-- Middle: Chart & Category Breakdown Grid (Balanced 50/50 Ratio with Table) -->
+              <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 8px; flex: 1.1; min-height: 0;">
+                
+                <!-- Chart Box -->
+                <div class="wf-box" style="padding: 8px 12px; display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; flex: 0 0 auto;">
+                    <div style="font-weight: 800; font-size: 11.5px; color: #0f172a;">Grafik Tren Omset vs Laba Bersih</div>
+                    <div style="display: flex; gap: 12px; font-size: 9.5px; font-weight: 700; color: var(--wire-subtext);">
+                      <span>-- Omzet Penjualan</span>
+                      <span>- - Laba Bersih</span>
+                    </div>
+                  </div>
+
+                  <!-- Standard Clean Monochrome SVG Trend Chart -->
+                  <div style="flex: 1; width: 100%; min-height: 0; position: relative; margin: 3px 0;">
+                    <svg width="100%" height="100%" viewBox="0 0 400 100" preserveAspectRatio="none">
+                      <!-- Grid horizontal lines -->
+                      <line x1="0" y1="18" x2="400" y2="18" stroke="#e2e8f0" stroke-dasharray="3,3" stroke-width="1" />
+                      <line x1="0" y1="48" x2="400" y2="48" stroke="#e2e8f0" stroke-dasharray="3,3" stroke-width="1" />
+                      <line x1="0" y1="78" x2="400" y2="78" stroke="#e2e8f0" stroke-dasharray="3,3" stroke-width="1" />
+
+                      <!-- Area fill 1: Omzet Penjualan -->
+                      <path d="M0,65 Q50,50 100,60 T200,32 T300,18 T400,8 L400,95 L0,95 Z" fill="#f1f5f9" opacity="0.75" />
+                      <!-- Line 1: Omzet Penjualan -->
+                      <path d="M0,65 Q50,50 100,60 T200,32 T300,18 T400,8" fill="none" stroke="#000000" stroke-width="2.2" />
+
+                      <!-- Area fill 2: Laba Bersih -->
+                      <path d="M0,82 Q50,72 100,78 T200,50 T300,35 T400,24 L400,95 L0,95 Z" fill="#e2e8f0" opacity="0.6" />
+                      <!-- Line 2: Laba Bersih -->
+                      <path d="M0,82 Q50,72 100,78 T200,50 T300,35 T400,24" fill="none" stroke="#475569" stroke-width="1.6" stroke-dasharray="5,3" />
+                    </svg>
+                  </div>
+
+                  <div style="display: flex; justify-content: space-between; font-size: 8.5px; color: var(--wire-subtext); font-family: monospace; padding-top: 2px; border-top: 1px dashed #e2e8f0; flex: 0 0 auto;">
+                    <span>30 Jul</span><span>1 Agu</span><span>2 Agu</span><span>3 Agu</span><span>4 Agu</span><span>5 Agu</span><span>6 Agu</span><span>8 Agu</span><span>9 Agu</span><span>11 Agu</span><span>13 Agu</span><span>16 Agu</span><span>19 Agu</span>
+                  </div>
+                </div>
+
+                <!-- Right: Kategori Produk List -->
+                <div class="wf-box" style="padding: 8px 12px; display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
+                  <div style="font-weight: 800; font-size: 11.5px; color: #0f172a; margin-bottom: 2px; flex: 0 0 auto;">Kategori Produk</div>
+
+                  <div style="display: flex; flex-direction: column; justify-content: space-between; flex: 1; min-height: 0; font-size: 9.5px;">
+                    <div>
+                      <div style="display: flex; justify-content: space-between; font-weight: 700;">
+                        <span>BAHAN KONTRUKSI</span>
+                        <span>24% <span style="font-weight: normal; color: var(--wire-subtext);">(5179 Qty)</span></span>
+                      </div>
+                      <div style="height: 3px; background: #e2e8f0; border-radius: 1.5px; margin-top: 1.5px;">
+                        <div style="height: 100%; width: 24%; background: #000000; border-radius: 1.5px;"></div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style="display: flex; justify-content: space-between; font-weight: 700;">
+                        <span>Semen</span>
+                        <span>15% <span style="font-weight: normal; color: var(--wire-subtext);">(18268 Qty)</span></span>
+                      </div>
+                      <div style="height: 3px; background: #e2e8f0; border-radius: 1.5px; margin-top: 1.5px;">
+                        <div style="height: 100%; width: 15%; background: #334155; border-radius: 1.5px;"></div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style="display: flex; justify-content: space-between; font-weight: 700;">
+                        <span>ATAP</span>
+                        <span>14% <span style="font-weight: normal; color: var(--wire-subtext);">(198 Qty)</span></span>
+                      </div>
+                      <div style="height: 3px; background: #e2e8f0; border-radius: 1.5px; margin-top: 1.5px;">
+                        <div style="height: 100%; width: 14%; background: #475569; border-radius: 1.5px;"></div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style="display: flex; justify-content: space-between; font-weight: 700;">
+                        <span>BESI</span>
+                        <span>14% <span style="font-weight: normal; color: var(--wire-subtext);">(453 Qty)</span></span>
+                      </div>
+                      <div style="height: 3px; background: #e2e8f0; border-radius: 1.5px; margin-top: 1.5px;">
+                        <div style="height: 100%; width: 14%; background: #64748b; border-radius: 1.5px;"></div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style="display: flex; justify-content: space-between; font-weight: 700;">
+                        <span>BAHAN ALAM</span>
+                        <span>6% <span style="font-weight: normal; color: var(--wire-subtext);">(410 Qty)</span></span>
+                      </div>
+                      <div style="height: 3px; background: #e2e8f0; border-radius: 1.5px; margin-top: 1.5px;">
+                        <div style="height: 100%; width: 6%; background: #94a3b8; border-radius: 1.5px;"></div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style="display: flex; justify-content: space-between; font-weight: 700;">
+                        <span>PASIR PASANG</span>
+                        <span>3% <span style="font-weight: normal; color: var(--wire-subtext);">(524 Qty)</span></span>
+                      </div>
+                      <div style="height: 3px; background: #e2e8f0; border-radius: 1.5px; margin-top: 1.5px;">
+                        <div style="height: 100%; width: 3%; background: #cbd5e1; border-radius: 1.5px;"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Bottom Bar: Sub-Tabs & Search Input (100% Fully Uncovered & Visible) -->
+              <div style="display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 4px 8px; border: 1.5px solid var(--wire-border-dark); border-radius: 6px; flex: 0 0 auto;">
+                <div style="display: flex; gap: 6px;">
+                  <button class="wf-btn wf-btn-primary" style="font-size: 10.5px; padding: 3px 8px; background: #000000; border-color: #000000;">Riwayat Transaksi</button>
+                  <button class="wf-btn wf-btn-outline" style="font-size: 10.5px; padding: 3px 8px; border-color: #000; color: #000;">Produk Terlaris</button>
+                  <button class="wf-btn wf-btn-outline" style="font-size: 10.5px; padding: 3px 8px; border-color: #000; color: #000;">Metode Pembayaran</button>
+                  <button class="wf-btn wf-btn-outline" style="font-size: 10.5px; padding: 3px 8px; border-color: #000; color: #000;">Jam Sibuk</button>
+                </div>
+                <input type="text" class="wf-input" placeholder="Cari transaksi..." readonly style="font-size: 10.5px; width: 180px; padding: 3px 6px; border-color: #000;" />
+              </div>
+
+              <!-- Transactions Table (Balanced 50/50 Ratio with Chart) -->
+              <div style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+                <table class="wf-table" style="background: #ffffff; height: 100%;">
+                  <thead>
+                    <tr>
+                      <th>No. Invoice</th>
+                      <th>Waktu Transaksi</th>
+                      <th>Kanal Bayar</th>
+                      <th style="text-align: right;">Total Bayar</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td style="font-family: monospace; font-weight: bold;">INV-20260819-002</td>
+                      <td>19 Agu 2026, 15.48</td>
+                      <td><span class="wf-badge" style="background: #f4f4f5; color: #000; border-color: #000;">Tunai (Cash)</span></td>
+                      <td style="text-align: right; font-weight: 800;">Rp 75.000</td>
+                    </tr>
+                    <tr style="background: #f8fafc;">
+                      <td style="font-family: monospace; font-weight: bold;">INV-20260819-001</td>
+                      <td>19 Agu 2026, 15.48</td>
+                      <td><span class="wf-badge" style="background: #f4f4f5; color: #000; border-color: #000;">QRIS</span></td>
+                      <td style="text-align: right; font-weight: 800;">Rp 75.000</td>
+                    </tr>
+                    <tr>
+                      <td style="font-family: monospace; font-weight: bold;">INV-20260818-024</td>
+                      <td>18 Agu 2026, 10.38</td>
+                      <td><span class="wf-badge" style="background: #f4f4f5; color: #000; border-color: #000;">QRIS</span></td>
+                      <td style="text-align: right; font-weight: 800;">Rp 70.000</td>
+                    </tr>
+                    <tr style="background: #f8fafc;">
+                      <td style="font-family: monospace; font-weight: bold;">INV-20260818-023</td>
+                      <td>18 Agu 2026, 10.31</td>
+                      <td><span class="wf-badge" style="background: #f4f4f5; color: #000; border-color: #000;">QRIS</span></td>
+                      <td style="text-align: right; font-weight: 800;">Rp 125.000</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // Tab switching logic
+    function switchTab(tabId) {
+      document.querySelectorAll('.wireframe-view').forEach(view => {
+        view.classList.remove('active');
+      });
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+
+      document.getElementById(tabId).classList.add('active');
+
+      const activeBtn = Array.from(document.querySelectorAll('.nav-btn')).find(btn => {
+        return btn.getAttribute('onclick').includes(tabId);
+      });
+      if(activeBtn) activeBtn.classList.add('active');
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Sub-Tab switching logic inside Inventory
+    function switchSubTab(subId) {
+      document.querySelectorAll('.sub-tab-content').forEach(content => {
+        content.style.display = 'none';
+      });
+      document.querySelectorAll('.sub-tab-btn').forEach(btn => {
+        btn.classList.remove('wf-btn-primary');
+        btn.classList.add('wf-btn-outline');
+      });
+
+      const target = document.getElementById(subId);
+      if(target) target.style.display = 'block';
+
+      if(event && event.currentTarget) {
+        event.currentTarget.classList.remove('wf-btn-outline');
+        event.currentTarget.classList.add('wf-btn-primary');
+      }
+    }
+
+    // Toggle Screenshot Mode (Hides top bar for clean screenshots)
+    function toggleScreenshotMode() {
+      document.body.classList.toggle('screenshot-mode');
+    }
+
+    // Cart Phase Switching (Fase 1: Keranjang <-> Fase 2: Pembayaran)
+    function showCartPhase(phase) {
+      const p1 = document.getElementById('cart-phase-1');
+      const p2 = document.getElementById('cart-phase-2');
+      if (phase === 2) {
+        if (p1) p1.style.display = 'none';
+        if (p2) p2.style.display = 'block';
+        updateChangeCalculation();
+      } else {
+        if (p1) p1.style.display = 'block';
+        if (p2) p2.style.display = 'none';
+      }
+    }
+
+    // Payment Method Selection in Wireframe
+    function selectPayMethod(btn, method) {
+      const allBtns = document.querySelectorAll('.wf-pay-method');
+      allBtns.forEach(b => {
+        b.style.background = '#ffffff';
+        b.style.color = '#0f172a';
+        b.style.borderColor = 'var(--wire-border-dark)';
+        b.style.fontWeight = '600';
+      });
+      btn.style.background = '#0f172a';
+      btn.style.color = '#ffffff';
+      btn.style.borderColor = '#0f172a';
+      btn.style.fontWeight = '700';
+
+      const cashSec = document.getElementById('wf-cash-section');
+      const noncashSec = document.getElementById('wf-noncash-section');
+      const splitSec = document.getElementById('wf-split-section');
+
+      if (cashSec) cashSec.style.display = (method === 'tunai') ? 'block' : 'none';
+      if (noncashSec) noncashSec.style.display = (['transfer', 'debit', 'qris'].includes(method)) ? 'block' : 'none';
+      if (splitSec) splitSec.style.display = (method === 'split') ? 'block' : 'none';
+    }
+
+    // Quick cash suggestion setter
+    function setCashReceived(valStr) {
+      const input = document.getElementById('wf-uang-diterima');
+      if (input) {
+        input.value = valStr;
+        updateChangeCalculation();
+      }
+    }
+
+    // Calculation for Kurang Bayar vs Kembalian (Monochrome)
+    function updateChangeCalculation() {
+      const input = document.getElementById('wf-uang-diterima');
+      const label = document.getElementById('wf-change-label');
+      const amount = document.getElementById('wf-change-amount');
+      const box = document.getElementById('wf-change-box');
+      if (!input || !label || !amount || !box) return;
+
+      const total = 750000;
+      const rawVal = input.value.replace(/\D/g, '');
+      const received = parseInt(rawVal, 10) || 0;
+      
+      if (rawVal) {
+        input.value = received.toLocaleString('id-ID');
+      }
+
+      const diff = received - total;
+
+      if (diff < 0) {
+        label.innerText = 'Kurang Bayar';
+        label.style.color = '#000000';
+        amount.innerText = 'Rp ' + Math.abs(diff).toLocaleString('id-ID');
+        amount.style.color = '#000000';
+        box.style.background = '#f8fafc';
+        box.style.borderColor = '#000000';
+      } else {
+        label.innerText = 'Kembalian';
+        label.style.color = '#000000';
+        amount.innerText = 'Rp ' + diff.toLocaleString('id-ID');
+        amount.style.color = '#000000';
+        box.style.background = '#f8fafc';
+        box.style.borderColor = '#000000';
+      }
+    }
+
+    // Keydown ESC to exit screenshot mode
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && document.body.classList.contains('screenshot-mode')) {
+        document.body.classList.remove('screenshot-mode');
+      }
+    });
+  </script>
+</body>
+</html>

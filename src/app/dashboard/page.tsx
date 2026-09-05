@@ -1,817 +1,889 @@
-import React, { useMemo, useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { SummaryCard } from '@/components/SummaryCard';
+"use client"
+
+import * as React from "react"
+import { useNavigate } from "react-router-dom"
 import { 
   TrendingUp, 
   TrendingDown, 
-  DollarSign, 
-  AlertCircle, 
-  Download, 
-  FileText, 
-  Table as TableIcon,
-  FileSpreadsheet,
+  RefreshCw, 
+  Calendar, 
+  ShoppingCart, 
+  Package, 
   ArrowUpRight,
-  ArrowDownRight,
-  BarChart3,
-  PieChart as PieChartIcon,
-  RefreshCw,
-  Layers,
+  AlertTriangle,
   CheckCircle2,
-  X,
-  Calendar
-} from "lucide-react";
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer, 
-  Cell,
-  LineChart,
-  Line,
-  AreaChart,
-  Area,
-  PieChart,
-  Pie,
-  Sector
-} from "recharts";
-import * as XLSX from "xlsx";
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
-import { formatCurrency, cn } from "../../lib/utils";
-import { useTheme } from "../../context/ThemeContext";
-import { useSettingsStore } from "../../store/useSettingsStore";
+  Users,
+  FileText,
+  Clock
+} from "lucide-react"
 
-interface DashboardData {
-  metrics: {
-    totalRevenue: number;
-    revenueTrend: number;
-    totalHPP: number;
-    grossProfit: number;
-    netProfit: number;
-    netProfitTrend: number;
-    profitMargin: number;
-  };
-  salesTrend: Array<{ date: string; amount: number; hpp: number }>;
-  cashFlow: Array<{ date: string; inflow: number; outflow: number }>;
-  topProducts: Array<{ name: string; sales: number; revenue: number }>;
-  topCashiers: Array<{ name: string; revenue: number; transactionCount: number }>;
-  insights: {
-    lowStock: Array<{ name: string; stock: number; minStock: number }>;
-    lowStockCount: number;
-  };
-}
+import { 
+  Area, 
+  AreaChart, 
+  Bar, 
+  BarChart, 
+  CartesianGrid, 
+  ResponsiveContainer, 
+  Tooltip as RechartsTooltip, 
+  XAxis, 
+  YAxis
+} from "recharts"
+
+import { cn, formatCurrency } from "@/lib/utils"
+import { toast } from "@/components/ui/toast"
+import { Button } from "@/components/ui/button"
+import { Empty } from "@/components/ui/empty"
+import { Card } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select"
+import { 
+  Tabs, 
+  TabsContent, 
+  TabsList, 
+  TabsTrigger 
+} from "@/components/ui/tabs"
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table"
+import { Skeleton } from "@/components/ui/skeleton"
+import { 
+  Tooltip, 
+  TooltipContent, 
+  TooltipProvider, 
+  TooltipTrigger 
+} from "@/components/ui/tooltip"
+import { format } from "date-fns"
+import { id } from "date-fns/locale"
+import { type DateRange } from "react-day-picker"
+import { Calendar as UICalendar } from "@/components/ui/calendar"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+
+import { useDashboardStats } from "@/hooks/queries/useDashboard"
+import { TransactionDetailModal } from "@/app/reports/components/TransactionDetailModal"
 
 export default function DashboardPage() {
-  const navigate = useNavigate();
-  const settings = useSettingsStore(state => state.settings);
-  const [dateRange, setDateRange] = useState("this_month");
-  
-  const [customStartDate, setCustomStartDate] = useState(() => {
-    const d = new Date();
-    const past = new Date(d.getTime() - 7 * 24 * 60 * 60 * 1000);
-    return past.toISOString().split("T")[0];
-  });
-  const [customEndDate, setCustomEndDate] = useState(() => {
-    return new Date().toISOString().split("T")[0];
-  });
-  const [autoRefreshInterval, setAutoRefreshInterval] = useState(0);
-  const { theme, dashboardLayout } = useTheme();
+  const navigate = useNavigate()
+  const [timeRange, setTimeRange] = React.useState("today")
+  const [customDateRange, setCustomDateRange] = React.useState<DateRange | undefined>({
+    from: new Date(),
+    to: new Date(),
+  })
+  const [activeTab, setActiveTab] = React.useState("low-stock")
+  const [selectedSale, setSelectedSale] = React.useState<any | null>(null)
+  const [isDetailOpen, setIsDetailOpen] = React.useState(false)
 
-  const fetchDashboardStats = async () => {
-    let startDateStr = "";
-    let endDateStr = "";
-    
-    if (dateRange === "custom") {
-      startDateStr = customStartDate;
-      endDateStr = customEndDate;
-    } else {
-      const now = new Date();
-      let startDate = new Date();
-      let endDate = new Date();
-      
-      if (dateRange === "this_month") {
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-      } else if (dateRange === "last_month") {
-        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        endDate = new Date(now.getFullYear(), now.getMonth(), 0);
-      } else if (dateRange === "this_year") {
-        startDate = new Date(now.getFullYear(), 0, 1);
-      } else if (dateRange === "all_time") {
-        startDate = new Date(2000, 0, 1); // Arbitrary old date
-      }
-      
-      startDateStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, "0")}-${String(startDate.getDate()).padStart(2, "0")}`;
-      endDateStr = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, "0")}-${String(endDate.getDate()).padStart(2, "0")}`;
+  // Date Range Filters Calculation (Default: "today" untuk operasional real-time)
+  const dateFilters = React.useMemo(() => {
+    if (timeRange === "custom" && customDateRange?.from) {
+      const startDate = customDateRange.from.toISOString().split('T')[0];
+      const endDate = (customDateRange.to || customDateRange.from).toISOString().split('T')[0];
+      return { startDate, endDate };
     }
 
-    const queryParams = new URLSearchParams({
-      startDate: startDateStr,
-      endDate: endDateStr
-    });
+    const today = new Date();
+    const endDate = new Date(today);
+    let startDate = new Date(today);
 
-    const response = await fetch(`/api/dashboard/stats?${queryParams}`);
-    if (!response.ok) throw new Error("Gagal memuat data dashboard. Pastikan server berjalan.");
-    return response.json();
-  };
-
-  const {
-    data,
-    isLoading,
-    isError,
-    error,
-    refetch,
-    isFetching
-  } = useQuery<DashboardData, Error>({
-    queryKey: ['dashboardStats', dateRange, customStartDate, customEndDate],
-    queryFn: fetchDashboardStats,
-    placeholderData: keepPreviousData,
-    staleTime: 60000,
-    refetchInterval: autoRefreshInterval > 0 ? autoRefreshInterval * 1000 : false,
-    retry: 1,
-  });
-
-  useEffect(() => {
-    if (isError && data) {
-      toast.error("Gagal menyegarkan data dashboard", {
-        description: error?.message || "Pastikan koneksi internet atau server berjalan dengan baik."
-      });
+    switch (timeRange) {
+      case 'today':
+        break; // startDate & endDate is today
+      case '7d':
+        startDate.setDate(today.getDate() - 7);
+        break;
+      case '30d':
+        startDate.setDate(today.getDate() - 30);
+        break;
+      case 'this-month':
+        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+        break;
+      default:
+        break;
     }
-  }, [isError, error, data]);
 
-  const exportToExcel = () => {
-    if (!data) return;
-
-    const periodLabel = dateRange.replace('_', ' ').toUpperCase();
-    const printDate = new Date().toLocaleString('id-ID');
-
-    // Helper to create sheet with header
-    const createSheetWithHeader = (title: string, headers: string[], body: any[][]) => {
-      const aoa = [
-        [settings.shopName],
-        [title],
-        [`Periode: ${periodLabel}`],
-        [`Dicetak pada: ${printDate}`],
-        [], // Gap
-        headers,
-        ...body
-      ];
-      return XLSX.utils.aoa_to_sheet(aoa);
+    return {
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0],
     };
+  }, [timeRange, customDateRange]);
 
-    // 1. Summary Sheet
-    const summaryBody = [
-      ["Total Pendapatan", data.metrics.totalRevenue],
-      ["Total HPP", data.metrics.totalHPP],
-      ["Laba Kotor", data.metrics.grossProfit],
-      ["Laba Bersih", data.metrics.netProfit],
-      ["Margin Keuntungan (%)", data.metrics.profitMargin.toFixed(2) + "%"]
-    ];
-    const wsSummary = createSheetWithHeader("RINGKASAN BISNIS", ["Metrik", "Nilai"], summaryBody);
+  const { data, isLoading, refetch, isFetching } = useDashboardStats(dateFilters)
 
-    // 2. Top Products Sheet
-    const productsBody = data.topProducts.map(p => [p.name, p.sales, p.revenue]);
-    const wsProducts = createSheetWithHeader("PRODUK TERLARIS", ["Nama Produk", "Jumlah Terjual", "Total Omset"], productsBody);
-
-    // 3. Top Cashiers Sheet
-    const cashiersBody = data.topCashiers.map(c => [c.name, c.transactionCount, c.revenue]);
-    const wsCashiers = createSheetWithHeader("KASIR TERATAS", ["Nama Kasir", "Jumlah Transaksi", "Total Omset"], cashiersBody);
-
-    // 4. Sales Trend Sheet
-    const trendBody = data.salesTrend.map(t => [t.date, t.amount, t.hpp, t.amount - t.hpp]);
-    const wsTrend = createSheetWithHeader("TREN PENJUALAN", ["Tanggal", "Penjualan", "HPP", "Laba"], trendBody);
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, wsSummary, "Ringkasan Bisnis");
-    XLSX.utils.book_append_sheet(wb, wsProducts, "Produk Terlaris");
-    XLSX.utils.book_append_sheet(wb, wsCashiers, "Kasir Teratas");
-    XLSX.utils.book_append_sheet(wb, wsTrend, "Tren Penjualan");
-    
-    XLSX.writeFile(wb, `Laporan_Analitik_Bisnis_${new Date().toISOString().split('T')[0]}.xlsx`);
-  };
-
-  const exportToPDF = async () => {
-    if (!data) return;
-
-    const loadImage = (url: string): Promise<HTMLImageElement> => {
-      return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.src = url;
-        img.onload = () => resolve(img);
-        img.onerror = (err) => reject(err);
-      });
-    };
-
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.width;
-    
-    // Define Colors
-    const blackColor: [number, number, number] = [0, 0, 0];
-    const primaryColor: [number, number, number] = [15, 23, 42]; // Slate 900
-    const secondaryColor: [number, number, number] = [100, 116, 139]; // Slate 500
-    const accentColor: [number, number, number] = [59, 130, 246]; // Blue 500
-    const lightGray: [number, number, number] = [241, 245, 249]; // Slate 100
-
-    // Header
-    try {
-      const logo = await loadImage("/logo.png");
-      doc.addImage(logo, "PNG", 14, 12, 12, 12);
-      doc.setFontSize(22);
-      doc.setTextColor(...blackColor);
-      doc.setFont("helvetica", "bold");
-      doc.text(settings.shopName, 28, 22);
-    } catch (e) {
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(24);
-      doc.setTextColor(...blackColor);
-      doc.text(settings.shopName, 14, 22);
-    }
-    
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(100);
-    doc.text(settings.shopAddress, 14, 30);
-    doc.text(`Email: ${settings.shopEmail} | Telp: ${settings.shopPhone}`, 14, 35);
-    
-    // Divider Line
-    doc.setDrawColor(15, 74, 138);
-    doc.setLineWidth(0.5);
-    doc.line(14, 39, pageWidth - 14, 39);
-
-    // Document Title & Meta
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
-    doc.setTextColor(...primaryColor);
-    doc.text("LAPORAN ANALITIK BISNIS", 14, 48);
-    
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(...secondaryColor);
-    doc.text(`Periode: ${dateRange.replace('_', ' ').toUpperCase()}`, 14, 54);
-    doc.text(`Dicetak pada: ${new Date().toLocaleString('id-ID')}`, 14, 59);
-
-    // 1. Key Metrics Section
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    doc.setTextColor(...primaryColor);
-    doc.text("RINGKASAN KEUANGAN", 14, 75);
-    
-    const metricsData = [
-      ["Total Pendapatan", formatCurrency(data.metrics.totalRevenue)],
-      ["Total HPP", formatCurrency(data.metrics.totalHPP)],
-      ["Laba Bersih", formatCurrency(data.metrics.netProfit)],
-      ["Margin Keuntungan", `${data.metrics.profitMargin.toFixed(2)}%`]
-    ];
-
-    autoTable(doc, {
-      startY: 80,
-      body: metricsData,
-      theme: "plain",
-      styles: { 
-        font: "helvetica", 
-        fontSize: 10, 
-        cellPadding: { top: 4, right: 4, bottom: 4, left: 0 },
-        textColor: primaryColor
-      },
-      columnStyles: { 
-        0: { fontStyle: "bold", cellWidth: 80 }, 
-        1: { halign: "right", fontStyle: "normal" } 
-      },
-      didParseCell: function(data) {
-        if (data.row.index === 3) { // Laba Bersih row
-          data.cell.styles.fontStyle = 'bold';
-          data.cell.styles.textColor = accentColor;
-        }
-      }
-    });
-
-    // 2. Top Products Table
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    doc.setTextColor(...primaryColor);
-    doc.text("PRODUK TERLARIS", 14, (doc as any).lastAutoTable.finalY + 20);
-
-    const productTableData = data.topProducts.slice(0, 5).map((p, idx) => [
-      idx + 1,
-      p.name,
-      p.sales.toString(),
-      formatCurrency(p.revenue)
-    ]);
-
-    autoTable(doc, {
-      startY: (doc as any).lastAutoTable.finalY + 25,
-      head: [["NO", "NAMA PRODUK", "TERJUAL", "TOTAL OMSET"]],
-      body: productTableData,
-      theme: "grid",
-      headStyles: { 
-        fillColor: lightGray, 
-        textColor: primaryColor,
-        fontStyle: "bold",
-        fontSize: 9,
-        halign: "center"
-      },
-      styles: { 
-        font: "helvetica", 
-        fontSize: 9,
-        textColor: primaryColor,
-        lineColor: lightGray,
-        lineWidth: 0.1
-      },
-      columnStyles: {
-        0: { halign: "center", cellWidth: 15 },
-        1: { cellWidth: 80 },
-        2: { halign: "center", cellWidth: 30 },
-        3: { halign: "right" }
-      }
-    });
-
-    // 3. Sales Trend Summary
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    doc.setTextColor(...primaryColor);
-    doc.text("TREN PENJUALAN", 14, (doc as any).lastAutoTable.finalY + 20);
-    
-    const avgSales = data.salesTrend.reduce((sum, t) => sum + t.amount, 0) / (data.salesTrend.length || 1);
-    const maxSales = data.salesTrend.length > 0 ? Math.max(...data.salesTrend.map(t => t.amount)) : 0;
-    
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.setTextColor(...secondaryColor);
-    doc.text(`Rata-rata Penjualan Harian: ${formatCurrency(avgSales)}`, 14, (doc as any).lastAutoTable.finalY + 28);
-    doc.text(`Penjualan Tertinggi: ${formatCurrency(maxSales)}`, 14, (doc as any).lastAutoTable.finalY + 34);
-
-    // Footer
-    const pageCount = (doc as any).internal.getNumberOfPages();
-    for(let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
-      doc.setTextColor(...secondaryColor);
-      doc.text(
-        `Dicetak oleh Sistem POS ${settings.shopName} - Halaman ${i} dari ${pageCount}`, 
-        doc.internal.pageSize.width / 2, 
-        doc.internal.pageSize.height - 10, 
-        { align: "center" }
-      );
-    }
-
-    doc.save(`Laporan_Analitik_Bisnis_${new Date().toISOString().split('T')[0]}.pdf`);
-  };
-
-  if (isError && !data) {
-    return (
-      <div className="flex-1 flex items-center justify-center p-8 transition-colors duration-300 bg-bg-main">
-        <div className="p-8 rounded-[32px] border text-center max-w-md bg-bg-card border-status-danger/20">
-          <div className="w-16 h-16 bg-status-danger/10 text-status-danger rounded-[32px] flex items-center justify-center mx-auto mb-6">
-            <AlertCircle className="w-8 h-8" />
-          </div>
-          <h2 className="text-xl font-black text-text-primary mb-2">Oops! Terjadi Kesalahan</h2>
-          <p className="text-text-muted mb-8 font-medium">{error.message}</p>
-          <button 
-            onClick={() => refetch()}
-            className="w-full py-4 bg-brand-primary text-text-inverse rounded-2xl font-bold shadow-lg shadow-brand-primary/10 hover:bg-brand-hover transition-all flex items-center justify-center space-x-2"
-          >
-            <RefreshCw className="w-5 h-5" />
-            <span>Coba Lagi</span>
-          </button>
-        </div>
-      </div>
-    );
+  const handleRefresh = async () => {
+    await refetch()
+    toast.success("Dashboard Diperbarui", {
+      description: "Data operasional toko berhasil disinkronkan."
+    })
   }
 
-  const placeholderData: DashboardData = {
-    metrics: {
-      totalRevenue: 125000000,
-      revenueTrend: 12.5,
-      totalHPP: 95000000,
-      grossProfit: 30000000,
-      netProfit: 21500000,
-      netProfitTrend: 15.2,
-      profitMargin: 17.2,
-    },
-    salesTrend: [
-      { date: "Sen", amount: 5000000, hpp: 3800000 },
-      { date: "Sel", amount: 6000000, hpp: 4200000 },
-      { date: "Rab", amount: 4500000, hpp: 3200000 },
-      { date: "Kam", amount: 7000000, hpp: 5100000 },
-      { date: "Jum", amount: 5500000, hpp: 4000000 },
-      { date: "Sab", amount: 8000000, hpp: 5800000 },
-      { date: "Min", amount: 9000000, hpp: 6500000 }
-    ],
-    cashFlow: [
-      { date: "Sen", inflow: 5000000, outflow: 1000000 },
-      { date: "Sel", inflow: 6000000, outflow: 1500000 },
-      { date: "Rab", inflow: 4500000, outflow: 800000 },
-      { date: "Kam", inflow: 7000000, outflow: 2000000 },
-      { date: "Jum", inflow: 5500000, outflow: 1200000 },
-      { date: "Sab", inflow: 8000000, outflow: 2500000 },
-      { date: "Min", inflow: 9000000, outflow: 3000000 }
-    ],
-    topProducts: [
-      { name: "Semen Portland 50kg Tiga Roda", sales: 150, revenue: 15000000 },
-      { name: "Besi Beton 10mm SNI", sales: 120, revenue: 12000000 },
-      { name: "Pasir Beton per M3", sales: 85, revenue: 8500000 },
-      { name: "Pipa PVC Rucika 3 Inch", sales: 70, revenue: 3500000 },
-      { name: "Cat Tembok Dulux 5kg", sales: 50, revenue: 5000000 }
-    ],
-    topCashiers: [
-      { name: "Kasir 1", revenue: 45000000, transactionCount: 15 },
-      { name: "Kasir 2", revenue: 35000000, transactionCount: 12 },
-    ],
-    insights: {
-      lowStock: [
-        { name: "Besi Beton 10mm", stock: 5, minStock: 20 },
-        { name: "Cat Tembok Dulux 5kg", stock: 2, minStock: 10 },
-        { name: "Semen Portland 50kg", stock: 8, minStock: 30 }
-      ],
-      lowStockCount: 3,
+  // Dynamic Font Sizing for KPI cards (identik dengan Reports page)
+  const getFontSizeClass = (value: number) => {
+    const absVal = Math.abs(value);
+    if (absVal >= 1000000000) {
+      return "text-base sm:text-lg"; // 1 Billion+
     }
+    if (absVal >= 100000000) {
+      return "text-lg sm:text-xl"; // 100 Million+
+    }
+    if (absVal >= 10000000) {
+      return "text-xl sm:text-2xl"; // 10 Million+ ("2 digit" millions)
+    }
+    return "text-2xl sm:text-[28px]";
   };
 
-  const activeData = data || placeholderData;
-  const metrics = activeData.metrics;
-  const salesTrend = activeData.salesTrend || [];
-  const cashFlow = activeData.cashFlow || [];
-  const topProducts = activeData.topProducts || [];
-  const topCashiers = activeData.topCashiers || [];
-  const insights = activeData.insights;
+  const metrics = data?.metrics || {
+    totalRevenue: 0,
+    revenueTrend: 0,
+    totalHPP: 0,
+    grossProfit: 0,
+    netProfit: 0,
+    netProfitTrend: 0,
+    profitMargin: 0,
+    totalTransactions: 0,
+    transactionTrend: 0,
+    averageTransaction: 0,
+  }
 
-  const formatTrend = (val: number | undefined) => {
-    if (val === undefined) return "0%";
-    const sign = val > 0 ? "+" : "";
-    return `${sign}${val.toFixed(1)}%`;
-  };
+  const salesTrend = data?.salesTrend || []
+  const cashFlow = data?.cashFlow || []
+  const topProducts = data?.topProducts || []
+  const topCashiers = data?.topCashiers || []
+  const recentSales = data?.recentSales || []
+  const lowStockItems = data?.insights?.lowStock || []
+  const lowStockCount = data?.insights?.lowStockCount || 0
 
   return (
-    <phantom-ui loading={isLoading} reveal={0.3}>
-      <div className="p-4 lg:p-8 h-full flex flex-col space-y-8 lg:space-y-8 overflow-y-auto custom-scrollbar transition-colors duration-300 bg-bg-main">
-      {/* Header Group */}
-      <div className="flex flex-col">
-        {/* Header */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between space-y-4 lg:space-y-0">
+    <TooltipProvider>
+      <div className="flex flex-1 flex-col gap-4 p-3 md:p-5 w-full max-w-full overflow-x-hidden">
+        
+        {/* HEADER TOP BAR - Identik dengan Reports page */}
+        <div className="flex flex-col lg:flex-row lg:flex-wrap lg:items-center lg:justify-between gap-2.5 pb-1">
           <div>
-            <div className="flex items-center space-x-3">
-              <h1 className="text-xl lg:text-2xl font-black text-text-primary">Dashboard Analitik</h1>
-              {(isLoading || isFetching) && <RefreshCw className="w-4 h-4 text-brand-primary animate-spin" />}
-            </div>
-            <p className="text-xs lg:text-sm text-text-muted font-medium mt-1">Pantau performa bisnis Anda secara real-time</p>
-          </div>
-          <div className="flex items-center space-x-3 w-full lg:w-auto overflow-x-auto pb-2 lg:pb-0">
-            <select
-              value={dateRange}
-              onChange={(e) => setDateRange(e.target.value)}
-              className="px-4 py-2 rounded-xl border text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-primary bg-bg-card border-border-default text-text-primary h-[40px] transition-all [&>option]:bg-bg-card [&>option]:text-text-primary"
-            >
-              <option value="this_month">Bulan Ini</option>
-              <option value="last_month">Bulan Lalu</option>
-              <option value="this_year">Tahun Ini</option>
-              <option value="all_time">Semua Waktu</option>
-              <option value="custom">Kustom...</option>
-            </select>
-            <div className="flex items-center space-x-2 border rounded-xl px-4 py-2 bg-bg-card border-border-default h-[40px] focus-within:ring-2 focus-within:ring-brand-primary transition-all">
-              <span className="text-sm font-bold text-text-muted select-none">Auto:</span>
-              <select
-                value={autoRefreshInterval}
-                onChange={(e) => setAutoRefreshInterval(Number(e.target.value))}
-                className="text-sm font-bold bg-bg-card text-text-primary focus:outline-none cursor-pointer [&>option]:bg-bg-card [&>option]:text-text-primary"
-              >
-                <option value={0}>Mati</option>
-                <option value={10}>10s</option>
-                <option value={30}>30s</option>
-                <option value={60}>1m</option>
-                <option value={300}>5m</option>
-              </select>
-            </div>
-            <button 
-              onClick={() => refetch()}
-              className="p-2 border rounded-xl transition-all bg-bg-card border-border-default text-text-muted hover:text-brand-primary hover:bg-brand-light"
-              title="Refresh Data"
-            >
-              <RefreshCw className={cn("w-5 h-5", (isLoading || isFetching) && "animate-spin")} />
-            </button>
-            <button 
-              onClick={exportToExcel}
-              className="flex items-center justify-center space-x-1.5 h-11 border font-bold bg-bg-card border-border-default hover:bg-bg-card hover:brightness-95 text-emerald-600 hover:border-emerald-500/30 transition-all cursor-pointer whitespace-nowrap rounded-full px-6 py-[12px] text-[14px] font-bold active:scale-95 transition-transform"
-              title="Ekspor ke Excel"
-            >
-              <FileSpreadsheet className="w-4 h-4" />
-              <span>Excel</span>
-            </button>
-            <button 
-              onClick={exportToPDF}
-              className="flex items-center justify-center space-x-1.5 h-11 border font-bold bg-bg-card border-border-default hover:bg-bg-card hover:brightness-95 text-rose-600 hover:border-rose-500/30 transition-all cursor-pointer whitespace-nowrap rounded-full px-6 py-[12px] text-[14px] font-bold active:scale-95 transition-transform"
-              title="Ekspor ke PDF"
-            >
-              <Download className="w-4 h-4" />
-              <span>PDF</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Custom Date Picker Section */}
-        {dateRange === "custom" && (
-          <div className="flex justify-start lg:justify-end mt-4">
-            <div className="flex items-center gap-2 bg-bg-card px-5 rounded-full border border-border-default h-11 w-fit focus-within:ring-2 focus-within:ring-brand-primary transition-all">
-              <div className="relative flex items-center h-full">
-                <Calendar className="absolute left-2 w-4 h-4 text-text-secondary pointer-events-none z-10" />
-                <input 
-                  type="date"
-                  value={customStartDate}
-                  onChange={(e) => {
-                    setCustomStartDate(e.target.value);
-                    e.target.blur();
-                  }}
-                  className="pl-8 pr-2 h-full bg-transparent text-sm font-bold text-text-primary min-w-[130px] focus:outline-none cursor-pointer relative z-0"
-                />
-              </div>
-              <span className="text-text-muted font-bold">-</span>
-              <div className="relative flex items-center h-full">
-                <Calendar className="absolute left-2 w-4 h-4 text-text-secondary pointer-events-none z-10" />
-                <input 
-                  type="date"
-                  value={customEndDate}
-                  onChange={(e) => {
-                    setCustomEndDate(e.target.value);
-                    e.target.blur();
-                  }}
-                  className="pl-8 pr-2 h-full bg-transparent text-sm font-bold text-text-primary min-w-[130px] focus:outline-none cursor-pointer relative z-0"
-                />
-              </div>
-              <button 
-                onClick={() => setDateRange("this_month")}
-                className="ml-1 p-1 text-text-muted hover:text-brand-primary hover:bg-brand-light rounded-full transition-colors"
-                title="Tutup"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Actionable Insights */}
-      {insights && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
-          {(insights.lowStock.length > 0) && (
-            <div className="col-span-full mb-2">
-              <h2 className="text-sm font-black text-text-primary uppercase tracking-widest flex items-center">
-                <AlertCircle className="w-4 h-4 mr-2 text-status-warning" />
-                Perlu Perhatian
-              </h2>
-            </div>
-          )}
-          
-          {insights.lowStock.length > 0 && (
-            <div 
-              onClick={() => navigate("/inventory", { state: { filter: "LOW_STOCK" } })}
-              className="p-4 bg-status-warning/10 border border-status-warning/20 rounded-2xl flex items-start space-x-3 cursor-pointer hover:bg-status-warning/20 transition-all"
-            >
-              <div className="p-2 bg-status-warning/20 rounded-[24px] text-status-warning mt-0.5">
-                <Layers className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-status-warning">Stok Menipis</h3>
-                <p className="text-xs text-status-warning/80 mt-1">{insights.lowStockCount} produk di bawah batas minimum.</p>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {dashboardLayout.showMetrics && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 lg:gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <SummaryCard 
-            title="Total Omset" 
-            value={formatCurrency(metrics?.totalRevenue || 0)} 
-            trend={formatTrend(metrics?.revenueTrend)} 
-            isPositive={(metrics?.revenueTrend || 0) >= 0} 
-            icon={<TrendingUp className="w-6 h-6" />}
-            color="blue"
-            sparklineData={salesTrend.map(d => d.amount)}
-            isLoading={isLoading}
-          />
-          <SummaryCard 
-            title="Laba Bersih" 
-            value={formatCurrency(metrics?.netProfit || 0)} 
-            trend={formatTrend(metrics?.netProfitTrend)} 
-            isPositive={(metrics?.netProfitTrend || 0) >= 0} 
-            icon={<DollarSign className="w-6 h-6" />}
-            color="green"
-            sparklineData={salesTrend.map(d => d.amount - d.hpp)}
-            isLoading={isLoading}
-          />
-        </div>
-      )}
-
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-        {/* Revenue Trend */}
-        {dashboardLayout.showSalesTrend && (
-          <div className="p-8 lg:p-8 rounded-[32px] lg:rounded-[32px] border flex flex-col h-[350px] lg:h-[450px] transition-all duration-300 animate-in fade-in slide-in-from-left-4 bg-bg-card border-border-default">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 lg:mb-8 space-y-2 sm:space-y-0">
-              <div>
-                <h3 className="text-base lg:text-lg font-black text-text-primary">Tren Penjualan</h3>
-                <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider mt-1">Periode Terpilih</p>
-              </div>
-              <div className="flex items-center space-x-4 text-[10px] lg:text-xs font-bold">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-brand-primary rounded-full"></div>
-                  <span className="text-text-secondary">Omset</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-border-strong rounded-full"></div>
-                  <span className="text-text-secondary">HPP</span>
-                </div>
-              </div>
-            </div>
-            <div className="flex-1">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={salesTrend}>
-                  <defs>
-                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--color-brand-primary)" stopOpacity={0.1}/>
-                      <stop offset="95%" stopColor="var(--color-brand-primary)" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border-subtle)" />
-                  <XAxis 
-                    dataKey="date" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{fill: 'var(--color-text-muted)', fontSize: 10, fontWeight: 700}}
-                    dy={10}
-                    tickFormatter={(val) => val.split('-').slice(1).reverse().join('/')}
-                  />
-                  <YAxis 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{fill: 'var(--color-text-muted)', fontSize: 10, fontWeight: 700}}
-                    tickFormatter={(val) => `Rp${(val/1000000).toFixed(0)}M`}
-                  />
-                  <Tooltip cursor={false} 
-                    contentStyle={{
-                      borderRadius: '16px', 
-                      border: 'none', 
-                      boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-                      backgroundColor: "var(--bg-modal)",
-                      color: "var(--color-text-primary)"
-                    }}
-                    itemStyle={{ color: "var(--color-text-primary)" }}
-                    formatter={(val: any) => [formatCurrency(val), ""]}
-                  />
-                  <Area type="monotone" dataKey="amount" stroke="var(--color-brand-primary)" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
-                  <Area type="monotone" dataKey="hpp" stroke="var(--color-border-strong)" strokeWidth={2} fill="transparent" strokeDasharray="5 5" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        )}
-
-        {/* Cash Flow Analysis */}
-        <div className="p-8 lg:p-8 rounded-[32px] lg:rounded-[32px] border flex flex-col h-[350px] lg:h-[450px] transition-all duration-300 animate-in fade-in slide-in-from-right-4 bg-bg-card border-border-default">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 lg:mb-8 space-y-2 sm:space-y-0">
-            <div>
-              <h3 className="text-base lg:text-lg font-black text-text-primary">Analisis Arus Kas</h3>
-              <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider mt-1">Uang Masuk vs Keluar</p>
-            </div>
-            <div className="flex items-center space-x-4 text-[10px] lg:text-xs font-bold">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-status-success rounded-full"></div>
-                <span className="text-text-secondary">Masuk</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-status-danger rounded-full"></div>
-                <span className="text-text-secondary">Keluar</span>
-              </div>
-            </div>
-          </div>
-          <div className="flex-1 min-h-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={cashFlow} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border-subtle)" />
-                <XAxis 
-                  dataKey="date" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{fill: 'var(--color-text-muted)', fontSize: 10, fontWeight: 700}}
-                  dy={10}
-                  tickFormatter={(val) => val.split('-').slice(1).reverse().join('/')}
-                />
-                <YAxis 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{fill: 'var(--color-text-muted)', fontSize: 10, fontWeight: 700}}
-                  tickFormatter={(val) => `Rp${(val/1000000).toFixed(0)}M`}
-                  dx={-10}
-                />
-                <Tooltip cursor={false} 
-                  contentStyle={{ 
-                    borderRadius: '16px', 
-                    border: 'none', 
-                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
-                    backgroundColor: "var(--bg-modal)",
-                    color: "var(--color-text-primary)"
-                  }}
-                  formatter={(value: number) => formatCurrency(value)}
-                  labelStyle={{ fontWeight: 'bold', marginBottom: '8px' }}
-                />
-                <Bar dataKey="inflow" fill="var(--color-status-success)" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                <Bar dataKey="outflow" fill="var(--color-status-danger)" radius={[4, 4, 0, 0]} maxBarSize={40} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      {/* Secondary Data Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 pb-8">
-        {/* Top Products */}
-        {dashboardLayout.showTopProducts && (
-          <div className="p-8 lg:p-8 rounded-[32px] lg:rounded-[32px] border flex flex-col transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 bg-bg-card border-border-default h-[400px]">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-base font-black text-text-primary">Produk Terlaris</h3>
-                <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider mt-1">Berdasarkan Omset</p>
-              </div>
-              <div className="p-2 bg-brand-light text-brand-primary rounded-[24px]">
-                <BarChart3 className="w-5 h-5" />
-              </div>
-            </div>
-            <div className="space-y-8 flex-1 overflow-y-auto custom-scrollbar pr-2">
-              {topProducts.length === 0 ? (
-                <div className="text-center py-8 text-text-muted text-sm">Belum ada data penjualan</div>
-              ) : (
-                topProducts.map((product, index) => (
-                  <div 
-                    key={index} 
-                    className="flex items-center justify-between group cursor-pointer p-1.5 rounded-[24px] hover:bg-bg-main transition-all duration-200"
-                    onClick={() => navigate("/inventory")}
-                  >
-                    <div className="flex items-center space-x-3 overflow-hidden">
-                      <div className="w-8 h-8 rounded-[24px] bg-bg-main border border-border-default flex items-center justify-center text-xs font-black text-text-secondary flex-shrink-0 group-hover:bg-brand-primary group-hover:text-text-inverse group-hover:border-brand-primary transition-colors">
-                        {index + 1}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold text-text-primary truncate">{product.name}</p>
-                        <p className="text-[10px] text-text-muted font-medium mt-0.5">{product.sales} Terjual</p>
-                      </div>
-                    </div>
-                    <div className="text-right pl-4 flex-shrink-0">
-                      <p className="text-sm font-black text-text-primary">{formatCurrency(product.revenue)}</p>
-                    </div>
-                  </div>
-                ))
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+              <span>Dashboard</span>
+              {timeRange === "today" && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Real-Time
+                </span>
               )}
-            </div>
+            </h1>
           </div>
-        )}
 
-        {/* Top Cashiers */}
-        <div className="p-8 lg:p-8 rounded-[32px] lg:rounded-[32px] border flex flex-col transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 delay-100 bg-bg-card border-border-default h-[400px]">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-base font-black text-text-primary">Kasir Teratas</h3>
-              <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider mt-1">Berdasarkan Omset</p>
-            </div>
-            <div className="p-2 bg-status-warning/10 text-status-warning rounded-[24px]">
-              <TrendingUp className="w-5 h-5" />
+          {/* Action Buttons & Filters */}
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <Select 
+              value={timeRange} 
+              onValueChange={(val: any) => {
+                if (val) setTimeRange(typeof val === "string" ? val : val.value);
+              }}
+              items={[
+                { label: "Hari Ini", value: "today" },
+                { label: "7 Hari Terakhir", value: "7d" },
+                { label: "30 Hari Terakhir", value: "30d" },
+                { label: "Bulan Ini", value: "this-month" },
+                { label: "Kustom (Range)", value: "custom" },
+              ]}
+            >
+              <SelectTrigger className="w-[155px] bg-background shadow-2xs h-8 text-xs font-medium">
+                <Calendar className="size-3.5 mr-1.5 text-muted-foreground shrink-0" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">Hari Ini</SelectItem>
+                <SelectItem value="7d">7 Hari Terakhir</SelectItem>
+                <SelectItem value="30d">30 Hari Terakhir</SelectItem>
+                <SelectItem value="this-month">Bulan Ini</SelectItem>
+                <SelectItem value="custom">Kustom (Range)</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {timeRange === "custom" && (
+              <Popover>
+                <PopoverTrigger
+                  render={
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-2.5 justify-start text-xs font-normal bg-background shadow-2xs gap-1.5"
+                    >
+                      <Calendar className="size-3.5 text-muted-foreground shrink-0" />
+                      {customDateRange?.from ? (
+                        customDateRange.to ? (
+                          <>
+                            {format(customDateRange.from, "dd MMM yyyy", { locale: id })} -{" "}
+                            {format(customDateRange.to, "dd MMM yyyy", { locale: id })}
+                          </>
+                        ) : (
+                          format(customDateRange.from, "dd MMM yyyy", { locale: id })
+                        )
+                      ) : (
+                        <span>Pilih Rentang Tanggal</span>
+                      )}
+                    </Button>
+                  }
+                />
+                <PopoverContent className="w-auto p-0" align="end">
+                  <UICalendar
+                    mode="range"
+                    defaultMonth={customDateRange?.from}
+                    selected={customDateRange}
+                    onSelect={setCustomDateRange}
+                    numberOfMonths={2}
+                  />
+                </PopoverContent>
+              </Popover>
+            )}
+
+            <div className="flex items-center gap-1.5">
+              <Tooltip>
+                <TooltipTrigger>
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    onClick={handleRefresh} 
+                    disabled={isLoading || isFetching}
+                    className="size-8 shadow-2xs hover:bg-accent"
+                  >
+                    <RefreshCw className={cn("size-3.5 text-muted-foreground", (isLoading || isFetching) && "animate-spin text-primary")} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Perbarui Data</TooltipContent>
+              </Tooltip>
+
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => navigate("/inventory")}
+                className="h-8 px-2.5 gap-1.5 shadow-2xs border-emerald-600/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 font-medium text-xs"
+              >
+                <Package className="size-3.5" />
+                <span>Stok Inventori</span>
+              </Button>
+
+              <Button 
+                variant="default" 
+                size="sm" 
+                onClick={() => navigate("/")}
+                className="h-8 px-3 gap-1.5 shadow-2xs font-medium text-xs transition-transform active:scale-[0.98]"
+              >
+                <ShoppingCart className="size-3.5" />
+                <span>Buka POS</span>
+              </Button>
             </div>
           </div>
-          <div className="space-y-8 flex-1 overflow-y-auto custom-scrollbar pr-2">
-            {topCashiers.length === 0 ? (
-              <div className="text-center py-8 text-text-muted text-sm">Belum ada data kasir</div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* ROW 1: EXECUTIVE KPI SUMMARY CARDS - Identik dengan Reports page */}
+        {/* ========================================================================= */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          
+          {/* CARD 1: TOTAL OMZET */}
+          <div className="border border-border/60 bg-gradient-to-b from-card via-card to-blue-50/80 dark:bg-card dark:bg-none rounded-xl p-5 hover:border-border transition-all shadow-2xs">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-medium text-muted-foreground truncate">Total Omzet</span>
+              <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-border/60 bg-muted/40 text-[11px] font-semibold font-mono text-foreground shrink-0 whitespace-nowrap">
+                {metrics.revenueTrend >= 0 ? (
+                  <TrendingUp className="size-3 text-emerald-500" />
+                ) : (
+                  <TrendingDown className="size-3 text-rose-500" />
+                )}
+                <span>{metrics.revenueTrend >= 0 ? `+${metrics.revenueTrend.toFixed(1)}%` : `${metrics.revenueTrend.toFixed(1)}%`}</span>
+              </div>
+            </div>
+            {isLoading ? (
+              <div className="space-y-2 mt-3">
+                <Skeleton className="h-8 w-36" />
+                <Skeleton className="h-4 w-28" />
+              </div>
             ) : (
-              topCashiers.map((cashier, index) => (
-                <div 
-                  key={index} 
-                  className="flex items-center justify-between group cursor-pointer p-1.5 rounded-[24px] hover:bg-bg-main transition-all duration-200"
-                >
-                  <div className="flex items-center space-x-3 overflow-hidden">
-                    <div className="w-8 h-8 rounded-[24px] bg-bg-main border border-border-default flex items-center justify-center text-xs font-black text-text-secondary flex-shrink-0 group-hover:bg-status-warning group-hover:text-text-inverse group-hover:border-status-warning transition-colors">
-                      {index + 1}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-bold text-text-primary truncate">{cashier.name}</p>
-                      <p className="text-[10px] text-text-muted font-medium mt-0.5">{cashier.transactionCount} Transaksi</p>
-                    </div>
-                  </div>
-                  <div className="text-right pl-4 flex-shrink-0">
-                    <p className="text-sm font-black text-text-primary">{formatCurrency(cashier.revenue)}</p>
+              <>
+                <div className="mt-2 mb-3">
+                  <div className={cn("font-extrabold font-mono tracking-tight text-foreground transition-all", getFontSizeClass(metrics.totalRevenue))}>
+                    {formatCurrency(metrics.totalRevenue)}
                   </div>
                 </div>
-              ))
+                <p className="text-xs text-muted-foreground truncate">Total omzet kotor periode ini</p>
+              </>
+            )}
+          </div>
+
+          {/* CARD 2: ESTIMASI LABA */}
+          <div className="border border-border/60 bg-gradient-to-b from-card via-card to-blue-50/80 dark:bg-card dark:bg-none rounded-xl p-5 hover:border-border transition-all shadow-2xs">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-medium text-muted-foreground truncate">Estimasi Laba</span>
+              <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-border/60 bg-muted/40 text-[11px] font-semibold font-mono text-foreground shrink-0 whitespace-nowrap">
+                <TrendingUp className="size-3 text-blue-500" />
+                <span>+{metrics.profitMargin.toFixed(1)}%</span>
+              </div>
+            </div>
+            {isLoading ? (
+              <div className="space-y-2 mt-3">
+                <Skeleton className="h-8 w-36" />
+                <Skeleton className="h-4 w-28" />
+              </div>
+            ) : (
+              <>
+                <div className="mt-2 mb-3">
+                  <div className={cn("font-extrabold font-mono tracking-tight text-foreground transition-all", getFontSizeClass(metrics.netProfit))}>
+                    {formatCurrency(metrics.netProfit)}
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground truncate">
+                  HPP: <span className="font-semibold font-mono text-foreground">{formatCurrency(metrics.totalHPP)}</span>
+                </p>
+              </>
+            )}
+          </div>
+
+          {/* CARD 3: TOTAL TRANSAKSI */}
+          <div className="border border-border/60 bg-gradient-to-b from-card via-card to-blue-50/80 dark:bg-card dark:bg-none rounded-xl p-5 hover:border-border transition-all shadow-2xs">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-medium text-muted-foreground truncate">Total Transaksi</span>
+              <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-border/60 bg-muted/40 text-[11px] font-semibold font-mono text-foreground shrink-0 whitespace-nowrap">
+                {metrics.transactionTrend >= 0 ? (
+                  <TrendingUp className="size-3 text-purple-500" />
+                ) : (
+                  <TrendingDown className="size-3 text-rose-500" />
+                )}
+                <span>{metrics.transactionTrend >= 0 ? `+${metrics.transactionTrend.toFixed(1)}%` : `${metrics.transactionTrend.toFixed(1)}%`}</span>
+              </div>
+            </div>
+            {isLoading ? (
+              <div className="space-y-2 mt-3">
+                <Skeleton className="h-8 w-36" />
+                <Skeleton className="h-4 w-28" />
+              </div>
+            ) : (
+              <>
+                <div className="mt-2 mb-3">
+                  <div className={cn("font-extrabold font-mono tracking-tight text-foreground flex items-baseline gap-1.5 transition-all", getFontSizeClass(metrics.totalTransactions))}>
+                    <span>{metrics.totalTransactions}</span>
+                    <span className="text-sm font-normal text-muted-foreground">Trx</span>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground truncate">
+                  AOV: <span className="font-semibold font-mono text-foreground">{formatCurrency(metrics.averageTransaction)}</span>
+                </p>
+              </>
+            )}
+          </div>
+
+          {/* CARD 4: STOK KRITIS / REORDER */}
+          <div 
+            onClick={() => navigate("/inventory?tab=reorder")}
+            className="border border-border/60 bg-gradient-to-b from-card via-card to-blue-50/80 dark:bg-card dark:bg-none rounded-xl p-5 hover:border-border transition-all shadow-2xs cursor-pointer group"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-medium text-muted-foreground truncate group-hover:text-foreground transition-colors">Stok Menipis</span>
+              <div className={cn(
+                "inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-border/60 bg-muted/40 text-[11px] font-semibold font-mono text-foreground shrink-0 whitespace-nowrap",
+                lowStockCount > 0 && "text-rose-500 border-rose-500/30"
+              )}>
+                {lowStockCount > 0 ? (
+                  <AlertTriangle className="size-3 text-rose-500" />
+                ) : (
+                  <CheckCircle2 className="size-3 text-emerald-500" />
+                )}
+                <span>{lowStockCount > 0 ? "Reorder" : "Aman"}</span>
+              </div>
+            </div>
+            {isLoading ? (
+              <div className="space-y-2 mt-3">
+                <Skeleton className="h-8 w-36" />
+                <Skeleton className="h-4 w-28" />
+              </div>
+            ) : (
+              <>
+                <div className="mt-2 mb-3">
+                  <div className={cn("font-extrabold font-mono tracking-tight text-foreground flex items-baseline gap-1.5 transition-all", getFontSizeClass(lowStockCount))}>
+                    <span>{lowStockCount}</span>
+                    <span className="text-sm font-normal text-muted-foreground">Item</span>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground truncate">
+                  Produk di bawah batas minimum stok
+                </p>
+              </>
             )}
           </div>
         </div>
-      </div>
-    </div>
-    </phantom-ui>
-  );
-}
 
-const CHART_COLORS = ["var(--color-brand-primary)", "#3b82f6", "#60a5fa", "#93c5fd", "#bfdbfe"];
+        {/* ========================================================================= */}
+        {/* ROW 2: GRAPH & ARUS KAS - Identik dengan Reports page */}
+        {/* ========================================================================= */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          
+          {/* TREN PENJUALAN & LABA */}
+          <Card className="lg:col-span-2 border border-border/60 p-3.5 sm:p-4 shadow-2xs flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-sm sm:text-base font-semibold">
+                Grafik Tren Omzet vs Laba Bersih
+              </h2>
+              <div className="hidden sm:flex items-center gap-3 text-xs font-medium">
+                <div className="flex items-center gap-1.5">
+                  <span className="size-2 rounded-full bg-emerald-500 inline-block" />
+                  <span>Omzet</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="size-2 rounded-full bg-blue-500 inline-block" />
+                  <span>Laba Bersih</span>
+                </div>
+              </div>
+            </div>
+
+            {isLoading ? (
+              <Skeleton className="h-[220px] w-full rounded-lg" />
+            ) : salesTrend.length === 0 ? (
+              <Empty 
+                icon={TrendingUp}
+                title="Belum Ada Data Grafik"
+                description="Tidak ada data omzet & laba pada periode ini."
+                className="min-h-[225px]"
+              />
+            ) : (
+              <div className="h-[225px] sm:h-[235px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={salesTrend} margin={{ top: 6, right: 4, left: -10, bottom: -4 }}>
+                    <defs>
+                      <linearGradient id="colorOmzet" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.35}/>
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0.0}/>
+                      </linearGradient>
+                      <linearGradient id="colorLaba" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.35}/>
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/30" />
+                    <XAxis 
+                      dataKey="date" 
+                      tickLine={false} 
+                      axisLine={false} 
+                      tickMargin={4}
+                      tick={{ fontSize: 10, fill: "currentColor" }}
+                      className="text-muted-foreground" 
+                    />
+                    <YAxis hide />
+                    <RechartsTooltip 
+                      content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                          const omzet = Number(payload[0]?.value || 0)
+                          const laba = Number(payload[1]?.value ?? payload[0]?.payload?.profit ?? 0)
+                          return (
+                            <div className="rounded-lg border bg-popover p-2.5 shadow-md text-xs space-y-1 min-w-[150px]">
+                              <p className="font-semibold text-popover-foreground border-b pb-1 text-[11px]">{label}</p>
+                              <div className="flex justify-between items-center text-emerald-600 dark:text-emerald-400 font-mono">
+                                <span>Omzet:</span>
+                                <span className="font-bold">{formatCurrency(omzet)}</span>
+                              </div>
+                              <div className="flex justify-between items-center text-blue-600 dark:text-blue-400 font-mono">
+                                <span>Laba Bersih:</span>
+                                <span className="font-bold">{formatCurrency(laba)}</span>
+                              </div>
+                            </div>
+                          )
+                        }
+                        return null
+                      }}
+                    />
+                    <Area type="monotone" dataKey="amount" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorOmzet)" />
+                    <Area type="monotone" dataKey="profit" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorLaba)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </Card>
+
+          {/* ARUS KAS & PENGELUARAN */}
+          <Card className="lg:col-span-1 border border-border/60 p-3.5 sm:p-4 shadow-2xs flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-sm sm:text-base font-semibold">
+                Arus Kas Toko
+              </h2>
+            </div>
+
+            {isLoading ? (
+              <Skeleton className="h-[220px] w-full rounded-lg" />
+            ) : cashFlow.length === 0 ? (
+              <Empty 
+                icon={TrendingUp}
+                title="Arus Kas Kosong"
+                description="Belum ada data pemasukan & pengeluaran."
+                className="min-h-[225px]"
+              />
+            ) : (
+              <div className="h-[225px] sm:h-[235px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={cashFlow} margin={{ top: 6, right: 4, left: -20, bottom: -4 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/30" />
+                    <XAxis 
+                      dataKey="date" 
+                      tickLine={false} 
+                      axisLine={false} 
+                      tickMargin={4}
+                      tick={{ fontSize: 10, fill: "currentColor" }}
+                      className="text-muted-foreground" 
+                    />
+                    <YAxis hide />
+                    <RechartsTooltip 
+                      content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                          return (
+                            <div className="rounded-lg border bg-popover p-2.5 shadow-md text-xs space-y-1 min-w-[150px]">
+                              <p className="font-semibold text-popover-foreground border-b pb-1 text-[11px]">{label}</p>
+                              <div className="flex justify-between items-center text-emerald-600 dark:text-emerald-400 font-mono">
+                                <span>Masuk (Sales):</span>
+                                <span className="font-bold">{formatCurrency(Number(payload[0]?.value || 0))}</span>
+                              </div>
+                              <div className="flex justify-between items-center text-amber-600 dark:text-amber-400 font-mono">
+                                <span>Keluar (Kulakan):</span>
+                                <span className="font-bold">{formatCurrency(Number(payload[1]?.value || 0))}</span>
+                              </div>
+                            </div>
+                          )
+                        }
+                        return null
+                      }}
+                    />
+                    <Bar dataKey="inflow" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="outflow" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </Card>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* ROW 3: TATA LETAK 2-KOLOM OPERASIONAL (LIVE FEED TRANSAKSI & WATCHLIST) */}
+        {/* ========================================================================= */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          
+          {/* KARTU KIRI: TRANSAKSI TERKINI (LIVE STREAM OPERASIONAL) */}
+          <Card className="border border-border/60 p-3.5 sm:p-4 shadow-2xs flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h2 className="text-sm sm:text-base font-semibold text-foreground flex items-center gap-1.5">
+                    <Clock className="size-4 text-primary" />
+                    <span>Transaksi Terkini</span>
+                  </h2>
+                  <p className="text-xs text-muted-foreground">
+                    5 transaksi penjualan terbaru yang diproses
+                  </p>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => navigate("/reports")} 
+                  className="text-xs h-7 px-2 text-muted-foreground hover:text-foreground gap-1"
+                >
+                  <span>Laporan Struk</span>
+                  <ArrowUpRight className="size-3" />
+                </Button>
+              </div>
+
+              <div className="rounded-md border border-border/40 bg-card overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent border-border/40">
+                      <TableHead className="text-xs">No. Invoice</TableHead>
+                      <TableHead className="text-xs">Waktu</TableHead>
+                      <TableHead className="text-xs">Kanal Bayar</TableHead>
+                      <TableHead className="text-right text-xs font-semibold">Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
+                      Array.from({ length: 5 }).map((_, idx) => (
+                        <TableRow key={idx} className="border-border/40">
+                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
+                        </TableRow>
+                      ))
+                    ) : recentSales.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="h-44 p-0">
+                          <Empty 
+                            icon={FileText}
+                            title="Belum Ada Transaksi"
+                            description="Belum ada transaksi penjualan yang diproses pada periode ini."
+                            action={
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => navigate("/")}
+                                className="h-7 text-xs font-medium gap-1 px-2.5 shadow-2xs"
+                              >
+                                <ShoppingCart className="size-3" />
+                                <span>Buka POS Sekarang</span>
+                              </Button>
+                            }
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      recentSales.map((tx: any) => (
+                        <TableRow 
+                          key={tx.id} 
+                          onClick={() => {
+                            setSelectedSale(tx);
+                            setIsDetailOpen(true);
+                          }}
+                          className="border-border/40 hover:bg-muted/60 cursor-pointer transition-colors group select-none"
+                        >
+                          <TableCell className="font-mono font-medium text-primary text-xs flex items-center gap-1.5 group-hover:underline">
+                            <FileText className="size-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                            <span>{tx.invoiceNumber}</span>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground font-mono">
+                            {new Date(tx.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-[10px] font-normal py-0 px-1.5 bg-background">
+                              {tx.paymentMethod}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-mono font-bold text-xs text-foreground">
+                            {formatCurrency(tx.totalAmount)}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </Card>
+
+          {/* KARTU KANAN: TABBED OPERATIONAL WATCHLIST (STOK KRITIS, TOP PRODUK, KASIR) */}
+          <Card className="border border-border/60 p-3.5 sm:p-4 shadow-2xs flex flex-col justify-between">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <div className="flex items-center justify-between mb-3">
+                <TabsList className="inline-flex h-9 items-center justify-start rounded-lg bg-muted/60 p-1 text-muted-foreground">
+                  <TabsTrigger value="low-stock" className="px-3 py-1.5 text-xs font-medium gap-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs rounded-md">
+                    <AlertTriangle className="size-3.5" />
+                    <span>Stok Menipis ({lowStockCount})</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="top-products" className="px-3 py-1.5 text-xs font-medium gap-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs rounded-md">
+                    <Package className="size-3.5" />
+                    <span>Top Produk</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="cashiers" className="px-3 py-1.5 text-xs font-medium gap-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs rounded-md">
+                    <Users className="size-3.5" />
+                    <span>Kasir</span>
+                  </TabsTrigger>
+                </TabsList>
+
+                {activeTab === "low-stock" && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => navigate("/inventory?tab=reorder")} 
+                    className="text-xs h-7 px-2 text-muted-foreground hover:text-foreground gap-1"
+                  >
+                    <span>Restock</span>
+                    <ArrowUpRight className="size-3" />
+                  </Button>
+                )}
+              </div>
+
+              {/* TAB 1: STOK MENIPIS */}
+              <TabsContent value="low-stock" className="m-0">
+                <div className="rounded-md border border-border/40 bg-card overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent border-border/40">
+                        <TableHead className="text-xs">Nama Produk</TableHead>
+                        <TableHead className="text-center text-xs">Stok / Min</TableHead>
+                        <TableHead className="text-right text-xs">Status Reorder</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {isLoading ? (
+                        Array.from({ length: 5 }).map((_, idx) => (
+                          <TableRow key={idx} className="border-border/40">
+                            <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                            <TableCell><Skeleton className="h-4 w-16 mx-auto" /></TableCell>
+                            <TableCell><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
+                          </TableRow>
+                        ))
+                      ) : lowStockItems.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={3} className="h-44 p-0">
+                            <Empty 
+                              icon={CheckCircle2}
+                              title="Stok Aman"
+                              description="Semua stok produk dalam inventori di atas batas minimum."
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        lowStockItems.map((item: any, idx: number) => (
+                          <TableRow key={idx} className="border-border/40 hover:bg-muted/40">
+                            <TableCell className="font-medium text-xs text-foreground">
+                              {item.name}
+                            </TableCell>
+                            <TableCell className="text-center font-mono text-xs">
+                              <span className="font-bold text-rose-600 dark:text-rose-400">{item.stock}</span> / <span className="text-muted-foreground">{item.minStock}</span>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Badge variant="destructive" className="text-[10px] font-normal py-0 px-1.5">
+                                Reorder Required
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+
+              {/* TAB 2: TOP PRODUK TERLARIS */}
+              <TabsContent value="top-products" className="m-0">
+                <div className="rounded-md border border-border/40 bg-card overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent border-border/40">
+                        <TableHead className="w-[45px] text-center text-xs">No.</TableHead>
+                        <TableHead className="text-xs">Nama Produk</TableHead>
+                        <TableHead className="text-right text-xs">Unit</TableHead>
+                        <TableHead className="text-right text-xs font-semibold">Total Omzet</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {isLoading ? (
+                        Array.from({ length: 5 }).map((_, idx) => (
+                          <TableRow key={idx} className="border-border/40">
+                            <TableCell className="text-center"><Skeleton className="h-4 w-4 mx-auto" /></TableCell>
+                            <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                            <TableCell><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
+                            <TableCell><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
+                          </TableRow>
+                        ))
+                      ) : topProducts.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="h-44 p-0">
+                            <Empty 
+                              icon={Package}
+                              title="Belum Ada Data Produk"
+                              description="Belum ada produk yang terjual pada periode ini."
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        topProducts.map((prd: any, index: number) => (
+                          <TableRow key={index} className="border-border/40 hover:bg-muted/40">
+                            <TableCell className="text-center font-bold text-xs">
+                              <Badge 
+                                variant={index === 0 ? "default" : "outline"} 
+                                className={cn(
+                                  "size-5 rounded-full p-0 flex items-center justify-center mx-auto text-[10px] font-bold",
+                                  index === 0 && "bg-amber-500 hover:bg-amber-600 text-white border-none"
+                                )}
+                              >
+                                {index + 1}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="font-medium text-xs text-foreground">
+                              {prd.name}
+                            </TableCell>
+                            <TableCell className="text-right font-mono font-medium text-xs">
+                              {prd.sales}
+                            </TableCell>
+                            <TableCell className="text-right font-mono font-bold text-xs text-foreground">
+                              {formatCurrency(prd.revenue)}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+
+              {/* TAB 3: PERFORMA KASIR */}
+              <TabsContent value="cashiers" className="m-0">
+                <div className="rounded-md border border-border/40 bg-card overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent border-border/40">
+                        <TableHead className="text-xs">Nama Kasir / User</TableHead>
+                        <TableHead className="text-center text-xs">Jumlah Trx</TableHead>
+                        <TableHead className="text-right text-xs font-semibold">Total Omzet</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {isLoading ? (
+                        Array.from({ length: 3 }).map((_, idx) => (
+                          <TableRow key={idx} className="border-border/40">
+                            <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                            <TableCell><Skeleton className="h-4 w-12 mx-auto" /></TableCell>
+                            <TableCell><Skeleton className="h-4 w-24 ml-auto" /></TableCell>
+                          </TableRow>
+                        ))
+                      ) : topCashiers.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={3} className="h-44 p-0">
+                            <Empty 
+                              icon={Users}
+                              title="Belum Ada Data Kasir"
+                              description="Belum ada aktivitas transaksi kasir pada periode ini."
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        topCashiers.map((cashier: any, idx: number) => (
+                          <TableRow key={idx} className="border-border/40 hover:bg-muted/40">
+                            <TableCell className="font-medium text-xs text-foreground flex items-center gap-1.5">
+                              <Users className="size-3.5 text-muted-foreground" />
+                              <span>{cashier.name}</span>
+                            </TableCell>
+                            <TableCell className="text-center font-mono text-xs">
+                              {cashier.transactionCount} Trx
+                            </TableCell>
+                            <TableCell className="text-right font-mono font-bold text-xs text-foreground">
+                              {formatCurrency(cashier.revenue)}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </Card>
+
+        </div>
+
+        {/* TRANSACTION DETAIL MODAL */}
+        <TransactionDetailModal
+          isOpen={isDetailOpen}
+          onClose={() => setIsDetailOpen(false)}
+          sale={selectedSale}
+        />
+
+      </div>
+    </TooltipProvider>
+  )
+}

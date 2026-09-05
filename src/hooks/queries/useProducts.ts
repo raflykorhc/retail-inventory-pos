@@ -1,8 +1,8 @@
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/toast';
 import axiosClient from '../../lib/axiosClient';
 
-export const useProducts = (filters?: { search?: string; categoryId?: string; supplierId?: string }) => {
+export const useProducts = (filters?: { search?: string; categoryId?: string; supplierId?: string; abcCategory?: string; stockStatus?: string; page?: number; limit?: number; sort?: string }) => {
   return useQuery({
     queryKey: ['products', filters],
     queryFn: async () => {
@@ -10,11 +10,17 @@ export const useProducts = (filters?: { search?: string; categoryId?: string; su
       if (filters?.search) params.append('search', filters.search);
       if (filters?.categoryId) params.append('categoryId', filters.categoryId);
       if (filters?.supplierId) params.append('supplierId', filters.supplierId);
+      if (filters?.abcCategory) params.append('abcCategory', filters.abcCategory);
+      if (filters?.stockStatus) params.append('stockStatus', filters.stockStatus);
+      if (filters?.page) params.append('page', String(filters.page));
+      if (filters?.limit) params.append('limit', String(filters.limit));
+      if (filters?.sort) params.append('sort', filters.sort);
       
       const queryString = params.toString();
       const res = await axiosClient.get(queryString ? `/products?${queryString}` : '/products');
       return res.data;
     },
+    placeholderData: keepPreviousData,
   });
 };
 

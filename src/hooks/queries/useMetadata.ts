@@ -30,3 +30,13 @@ export const useSuppliers = () => {
     },
   });
 };
+
+export const useSettings = () => {
+  return useQuery({
+    queryKey: ['settings'],
+    queryFn: async () => {
+      const res = await axiosClient.get('/settings');
+      return res.data;
+    }
+  });
+};
