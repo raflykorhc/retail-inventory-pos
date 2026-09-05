@@ -5,16 +5,19 @@ import { InventoryOptimizationService } from "./InventoryOptimizationService.ts"
 const CONFIG_DIR = path.join(process.cwd(), "server", "config");
 const CONFIG_FILE = path.join(CONFIG_DIR, "optimization-status.json");
 
-interface SchedulerStatus {
+const LAST_CALC_FILE = path.join(CONFIG_DIR, "last-calculation.json");
+
+export interface SchedulerStatus {
   lastAutoRun: string | null;
   lastManualRun: string | null;
+  lastCalculationRun: string | null;
 }
 
 export class SchedulerService {
   private static timerId: NodeJS.Timeout | null = null;
 
   /**
-   * Mengambil status update terakhir (auto & manual)
+   * Mengambil status update terakhir (auto, manual, calculation)
    */
   static getStatus(): SchedulerStatus {
     try {
@@ -22,32 +25,99 @@ export class SchedulerService {
         this.initializeConfigFile();
       }
       const rawData = fs.readFileSync(CONFIG_FILE, "utf-8");
-      return JSON.parse(rawData);
+      const parsed = JSON.parse(rawData);
+      return {
+        lastAutoRun: parsed.lastAutoRun ?? null,
+        lastManualRun: parsed.lastManualRun ?? null,
+        lastCalculationRun: parsed.lastCalculationRun ?? null,
+      };
     } catch (error) {
       console.error("[Scheduler] Gagal membaca status optimasi:", error);
-      return { lastAutoRun: null, lastManualRun: null };
+      return { lastAutoRun: null, lastManualRun: null, lastCalculationRun: null };
     }
   }
 
   /**
    * Memperbarui stempel waktu eksekusi
    */
-  static updateStatus(type: "auto" | "manual"): void {
+  static updateStatus(type: "auto" | "manual" | "calculation"): void {
     try {
       if (!fs.existsSync(CONFIG_DIR)) {
         fs.mkdirSync(CONFIG_DIR, { recursive: true });
       }
       
       const currentStatus = this.getStatus();
-      const updatedStatus = {
+      const keyMap: Record<string, keyof SchedulerStatus> = {
+        auto: "lastAutoRun",
+        manual: "lastManualRun",
+        calculation: "lastCalculationRun",
+      };
+
+      const updatedStatus: SchedulerStatus = {
         ...currentStatus,
-        [type === "auto" ? "lastAutoRun" : "lastManualRun"]: new Date().toISOString()
+        [keyMap[type]]: new Date().toISOString(),
       };
 
       fs.writeFileSync(CONFIG_FILE, JSON.stringify(updatedStatus, null, 2), "utf-8");
       console.log(`[Scheduler] Berhasil memperbarui status ${type} ke:`, updatedStatus);
     } catch (error) {
       console.error("[Scheduler] Gagal memperbarui status optimasi:", error);
+    }
+  }
+
+  /**
+   * Menyimpan hasil kalkulasi analitik terakhir ke berkas cache lokal
+   */
+  static saveLastCalculation(data: any[], params?: any): void {
+    try {
+      if (!fs.existsSync(CONFIG_DIR)) {
+        fs.mkdirSync(CONFIG_DIR, { recursive: true });
+      }
+      const payload = {
+        timestamp: new Date().toISOString(),
+        params: params || null,
+        total: data.length,
+        data,
+      };
+      fs.writeFileSync(LAST_CALC_FILE, JSON.stringify(payload), "utf-8");
+    } catch (error) {
+      console.error("[Scheduler] Gagal menyimpan cache kalkulasi:", error);
+    }
+  }
+
+  /**
+   * Mengambil data kalkulasi analitik terakhir dari berkas cache jika ada
+   */
+  static getLastCalculation(): { data: any[]; params?: any; timestamp: string | null } | null {
+    try {
+      if (!fs.existsSync(LAST_CALC_FILE)) {
+        return null;
+      }
+      const rawData = fs.readFileSync(LAST_CALC_FILE, "utf-8");
+      return JSON.parse(rawData);
+    } catch (error) {
+      console.error("[Scheduler] Gagal membaca cache kalkulasi:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Menghapus cache hasil kalkulasi terakhir (termasuk hasil hitung ulang)
+   */
+  static clearLastCalculation(): void {
+    try {
+      if (fs.existsSync(LAST_CALC_FILE)) {
+        fs.unlinkSync(LAST_CALC_FILE);
+        console.log("[Scheduler] Berhasil menghapus cache kalkulasi.");
+      }
+      const currentStatus = this.getStatus();
+      const updatedStatus: SchedulerStatus = {
+        ...currentStatus,
+        lastCalculationRun: null,
+      };
+      fs.writeFileSync(CONFIG_FILE, JSON.stringify(updatedStatus, null, 2), "utf-8");
+    } catch (error) {
+      console.error("[Scheduler] Gagal menghapus cache kalkulasi:", error);
     }
   }
 
@@ -59,7 +129,11 @@ export class SchedulerService {
       if (!fs.existsSync(CONFIG_DIR)) {
         fs.mkdirSync(CONFIG_DIR, { recursive: true });
       }
-      const defaultStatus: SchedulerStatus = { lastAutoRun: null, lastManualRun: null };
+      const defaultStatus: SchedulerStatus = {
+        lastAutoRun: null,
+        lastManualRun: null,
+        lastCalculationRun: null,
+      };
       fs.writeFileSync(CONFIG_FILE, JSON.stringify(defaultStatus, null, 2), "utf-8");
     } catch (error) {
       console.error("[Scheduler] Gagal membuat file konfigurasi default:", error);
