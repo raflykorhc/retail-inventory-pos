@@ -23,42 +23,60 @@ import {
   Settings
 } from "lucide-react"
 
-const data = {
-  navMain: [
-    {
-      title: "Point of Sale (POS)",
-      url: "/",
-      icon: <ShoppingCart />,
-    },
-    {
-      title: "Dashboard",
-      url: "/dashboard",
-      icon: <LayoutDashboard />,
-    },
-    {
-      title: "Inventory",
-      url: "/inventory",
-      icon: <Package />,
-    },
-    {
-      title: "Laporan",
-      url: "/reports",
-      icon: <FileText />,
-    },
-  ],
-}
+import { useAuthStore, isOwnerRole } from "@/store/useAuthStore"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false)
   const { data: settings } = useSettings()
+  const { user } = useAuthStore()
+  const isOwner = isOwnerRole(user?.role)
 
-  const navSecondary = [
-    {
-      title: "Pengaturan",
-      onClick: () => setIsSettingsOpen(true),
-      icon: <Settings />,
-    },
-  ]
+  const navMain = React.useMemo(() => {
+    const items = [
+      {
+        title: "Point of Sale (POS)",
+        url: "/",
+        icon: <ShoppingCart />,
+      },
+    ]
+
+    // Menu Dashboard hanya dapat dilihat oleh Pemilik Usaha
+    if (isOwner) {
+      items.push({
+        title: "Dashboard",
+        url: "/dashboard",
+        icon: <LayoutDashboard />,
+      })
+    }
+
+    items.push(
+      {
+        title: "Inventory",
+        url: "/inventory",
+        icon: <Package />,
+      },
+      {
+        title: "Laporan",
+        url: "/reports",
+        icon: <FileText />,
+      }
+    )
+
+    return items
+  }, [isOwner])
+
+  const navSecondary = React.useMemo(() => {
+    // Menu Pengaturan Toko hanya untuk Pemilik Usaha
+    if (!isOwner) return []
+
+    return [
+      {
+        title: "Pengaturan",
+        onClick: () => setIsSettingsOpen(true),
+        icon: <Settings />,
+      },
+    ]
+  }, [isOwner])
 
   return (
     <>
@@ -83,8 +101,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenu>
         </SidebarHeader>
         <SidebarContent>
-          <NavMain items={data.navMain} />
-          <NavSecondary items={navSecondary} className="mt-auto" />
+          <NavMain items={navMain} />
+          {navSecondary.length > 0 && <NavSecondary items={navSecondary} className="mt-auto" />}
         </SidebarContent>
         <SidebarFooter>
           <NavUser />

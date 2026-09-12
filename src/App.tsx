@@ -27,6 +27,7 @@ export default function App() {
               <Layout>
                 <AnimatePresence mode="wait">
                   <Routes location={location} key={location.pathname}>
+                    {/* POS: Kasir & Pemilik Usaha */}
                     <Route 
                       path="/" 
                       element={
@@ -37,33 +38,67 @@ export default function App() {
                           transition={{ duration: 0.2, ease: "easeOut" }}
                           className="flex-1 flex flex-col min-h-0"
                         >
-                          <ProtectedRoute allowedRoles={["ADMIN", "MANAGER", "CASHIER"]}>
+                          <ProtectedRoute allowedRoles={["OWNER", "ADMIN", "MANAGER", "CASHIER"]}>
                             <POSPage />
                           </ProtectedRoute>
                         </motion.div>
                       } 
                     />
-                    {[
-                      { path: "/inventory", element: <InventoryPage /> },
-                      { path: "/dashboard", element: <DashboardPage /> },
-                      { path: "/reports", element: <ReportsPage /> }
-                    ].map((route) => (
-                      <Route 
-                        key={route.path}
-                        path={route.path} 
-                        element={
-                          <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            transition={{ duration: 0.2, ease: "easeOut" }}
-                            className="flex-1 flex flex-col min-h-0"
-                          >
-                            {route.element}
-                          </motion.div>
-                        } 
-                      />
-                    ))}
+                    
+                    {/* Dashboard: Khusus Pemilik Usaha */}
+                    <Route 
+                      path="/dashboard" 
+                      element={
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.2, ease: "easeOut" }}
+                          className="flex-1 flex flex-col min-h-0"
+                        >
+                          <ProtectedRoute allowedRoles={["OWNER", "ADMIN", "MANAGER"]}>
+                            <DashboardPage />
+                          </ProtectedRoute>
+                        </motion.div>
+                      } 
+                    />
+
+                    {/* Inventory: Pemilik Usaha & Kasir (tampilan terbatas pada Kasir) */}
+                    <Route 
+                      path="/inventory" 
+                      element={
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.2, ease: "easeOut" }}
+                          className="flex-1 flex flex-col min-h-0"
+                        >
+                          <ProtectedRoute allowedRoles={["OWNER", "ADMIN", "MANAGER", "CASHIER"]}>
+                            <InventoryPage />
+                          </ProtectedRoute>
+                        </motion.div>
+                      } 
+                    />
+
+                    {/* Laporan: Pemilik Usaha & Kasir (tampilan terbatas pada Kasir) */}
+                    <Route 
+                      path="/reports" 
+                      element={
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.2, ease: "easeOut" }}
+                          className="flex-1 flex flex-col min-h-0"
+                        >
+                          <ProtectedRoute allowedRoles={["OWNER", "ADMIN", "MANAGER", "CASHIER"]}>
+                            <ReportsPage />
+                          </ProtectedRoute>
+                        </motion.div>
+                      } 
+                    />
+
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </AnimatePresence>

@@ -8,16 +8,10 @@ async function main() {
 
   const accounts = [
     {
-      username: 'manager',
-      password: 'manager123',
-      fullName: 'Manager Toko',
-      role: 'MANAGER',
-    },
-    {
-      username: 'admin',
-      password: 'admin123',
-      fullName: 'Administrator',
-      role: 'ADMIN',
+      username: 'pemilik',
+      password: 'pemilik123',
+      fullName: 'Pemilik Usaha',
+      role: 'OWNER',
     },
     {
       username: 'kasir',
@@ -25,13 +19,29 @@ async function main() {
       fullName: 'Kasir Toko',
       role: 'CASHIER',
     },
+    // Akun legacy kompatibel
+    {
+      username: 'manager',
+      password: 'manager123',
+      fullName: 'Manager Toko (Pemilik)',
+      role: 'OWNER',
+    },
+    {
+      username: 'admin',
+      password: 'admin123',
+      fullName: 'Administrator (Pemilik)',
+      role: 'OWNER',
+    },
   ];
 
   for (const account of accounts) {
     const hashedPassword = await bcrypt.hash(account.password, 10);
     await prisma.user.upsert({
       where: { username: account.username },
-      update: {},
+      update: {
+        role: account.role,
+        fullName: account.fullName,
+      },
       create: {
         username: account.username,
         password: hashedPassword,
@@ -39,15 +49,15 @@ async function main() {
         role: account.role,
       },
     });
-    console.log(`  ✓ Akun "${account.username}" (${account.role}) siap.`);
+    console.log(`  ✓ Akun "${account.username}" (${account.role} - ${account.fullName}) siap.`);
   }
 
   console.log('\nSeeding selesai!');
-  console.log('─────────────────────────────────────');
-  console.log('  Username : manager  | Password: manager123');
-  console.log('  Username : admin    | Password: admin123');
-  console.log('  Username : kasir    | Password: kasir123');
-  console.log('─────────────────────────────────────');
+  console.log('───────────────────────────────────────────────────────');
+  console.log('  [PEMILIK USAHA] Username : pemilik  | Password: pemilik123');
+  console.log('  [KASIR]         Username : kasir    | Password: kasir123');
+  console.log('  (Legacy)        Username : manager  | Password: manager123');
+  console.log('───────────────────────────────────────────────────────');
 }
 
 main()

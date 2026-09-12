@@ -11,6 +11,8 @@ prisma/migrations/
 .agents
 simulasi_pengujian.sql
 tests/
+docs/
+scripts/
 
 # Understand Anything (tool IDE lokal)
 .understand-anything/
@@ -29,7 +31,7 @@ prisma/dev.db-wal
 uploads/
 
 # Database backups (besar & lokal)
-backups/
+#backups/
 prisma/*.sql
 
 # Scratch / file sementara
@@ -76,7 +78,7 @@ public/signature.png
 # Windows batch scripts lokal
 backup.bat
 prune-logs.bat
-restore.bat
+#restore.bat
 update.bat
 
 # Metadata IDE/tool lokal
