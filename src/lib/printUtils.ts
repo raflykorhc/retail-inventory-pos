@@ -234,10 +234,10 @@ export const handlePrintInvoice = (sale: any) => {
           <tbody>
             ${sale.items.map((item: any) => `
               <tr>
-                <td class="col-name">${item.product?.name || item.name || 'Produk'}</td>
+                <td class="col-name">${item.product?.name || item.name || 'Produk'}${item.isBonus ? ' <strong style="color: #16a34a; font-size: 10px;">[BONUS]</strong>' : ''}</td>
                 <td class="col-qty">${item.quantity}${item.unit?.name || item.unit || ''}</td>
-                <td class="col-price">${formatCurrency(Number(item.priceAtSale || item.price))}</td>
-                <td class="col-total">${formatCurrency(Number(item.priceAtSale || item.price) * item.quantity)}</td>
+                <td class="col-price">${item.isBonus ? 'Rp 0 (Gratis)' : formatCurrency(Number(item.priceAtSale || item.price))}</td>
+                <td class="col-total">${item.isBonus ? 'Rp 0' : formatCurrency(Number(item.priceAtSale || item.price) * item.quantity)}</td>
               </tr>
             `).join('')}
             ${Array(Math.max(0, 6 - sale.items.length)).fill(0).map(() => `

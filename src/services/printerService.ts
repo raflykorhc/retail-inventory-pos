@@ -185,12 +185,17 @@ export class PrinterService {
     // Items
     if (data.items && Array.isArray(data.items)) {
       data.items.forEach((item: any) => {
-        const itemName = item.name || (item.product ? item.product.name : 'Item');
-        const itemPrice = item.price || (item.product ? item.product.price : 0);
+        const rawName = item.name || (item.product ? item.product.name : 'Item');
+        const itemName = item.isBonus ? `${rawName} [BONUS]` : rawName;
+        const itemPrice = item.isBonus ? 0 : (item.price || (item.product ? item.product.price : 0));
         
-        const nameObj = itemName.length > 20 ? itemName.substring(0, 20) + '..' : itemName;
+        const nameObj = itemName.length > 24 ? itemName.substring(0, 24) + '..' : itemName;
         builder = builder.text(`${nameObj}\n`);
-        builder = builder.text(`  ${item.quantity} x ${formatCurrency(itemPrice)} = ${formatCurrency(item.quantity * itemPrice)}\n`);
+        if (item.isBonus) {
+          builder = builder.text(`  ${item.quantity} x Rp 0 = Rp 0 (GRATIS)\n`);
+        } else {
+          builder = builder.text(`  ${item.quantity} x ${formatCurrency(itemPrice)} = ${formatCurrency(item.quantity * itemPrice)}\n`);
+        }
       });
     }
 
