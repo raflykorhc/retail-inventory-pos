@@ -17,8 +17,13 @@ export class StockReportController {
     res.json(result);
   });
 
-  static getSummary = asyncHandler(async (req: Request, res: Response) => {
+  static getSummary = asyncHandler(async (req: any, res: Response) => {
     const summary = await StockReportService.getSummary();
+    if (req.user?.role === "CASHIER") {
+      summary.totalAssetValue = 0;
+      summary.reorderTotalCost = 0;
+      summary.valuationBySupplier = [];
+    }
     res.json(summary);
   });
 }

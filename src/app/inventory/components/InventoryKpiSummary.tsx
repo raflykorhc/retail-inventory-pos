@@ -3,6 +3,7 @@ import { formatCurrency, cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { useStockSummary } from "@/hooks/queries/useStockReports";
+import { useAuthStore, isOwnerRole } from "@/store/useAuthStore";
 
 interface InventoryKpiSummaryProps {
   onSelectStockFilter?: (status: string) => void;
@@ -19,10 +20,12 @@ export function InventoryKpiSummary({
   isFiltered = false,
   totalFilteredCount = 0,
 }: InventoryKpiSummaryProps) {
+  const { user } = useAuthStore();
+  const isOwner = isOwnerRole(user?.role);
   const { data: summary, isLoading } = useStockSummary();
 
   const filteredMetrics = useMemo(() => {
-    if (!isFiltered || !activeProducts) return null;
+    if (!isFiltered || !activeProducts || !Array.isArray(activeProducts)) return null;
 
     let totalAssetValue = 0;
     let totalPhysicalItems = 0;
@@ -69,8 +72,8 @@ export function InventoryKpiSummary({
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[1, 2, 3, 4].map((i) => (
+      <div className={cn("grid gap-4", isOwner ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" : "grid-cols-1 sm:grid-cols-3")}>
+        {[1, 2, 3, isOwner ? 4 : null].filter(Boolean).map((i) => (
           <div key={i} className="border border-border/60 bg-card rounded-xl p-5 shadow-2xs space-y-3">
             <div className="flex justify-between items-center">
               <Skeleton className="h-4 w-24" />
@@ -109,24 +112,31 @@ export function InventoryKpiSummary({
   const needAttentionCount = outOfStock + lowStock;
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {/* CARD 1: TOTAL NILAI ASET STOK */}
+    <div className={cn("grid gap-4", isOwner ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" : "grid-cols-1 sm:grid-cols-3")}>
+      {/* CARD 1: TOTAL NILAI ASET STOK (Untuk Kasir: Hanya Total Fisik Barang) */}
       <div className="border border-border/60 bg-gradient-to-b from-card via-card to-blue-50/80 dark:bg-card dark:bg-none rounded-xl p-5 hover:border-border transition-all shadow-2xs flex flex-col justify-between">
         <div className="flex items-center justify-between h-6">
           <span className="text-xs font-medium text-muted-foreground">
-            Total Nilai Aset
+            {isOwner ? "Total Nilai Aset" : "Total Stok Fisik"}
           </span>
           <div className="inline-flex items-center px-2 py-0.5 rounded-md border border-border/60 bg-muted/40 text-[11px] font-semibold font-mono text-foreground">
             <span>{totalProducts} SKU</span>
           </div>
         </div>
         <div className="my-2.5 h-8 flex items-center">
-          <div className={cn("font-extrabold font-mono tracking-tight text-foreground transition-all", getFontSizeClass(totalAsset))}>
-            {formatCurrency(totalAsset)}
-          </div>
+          {isOwner ? (
+            <div className={cn("font-extrabold font-mono tracking-tight text-foreground transition-all", getFontSizeClass(totalAsset))}>
+              {formatCurrency(totalAsset)}
+            </div>
+          ) : (
+            <div className="text-xl sm:text-2xl font-extrabold font-mono tracking-tight text-foreground flex items-baseline gap-1.5">
+              <span>{Math.round(totalItems).toLocaleString("id-ID")}</span>
+              <span className="text-xs font-normal text-muted-foreground">Unit Fisik</span>
+            </div>
+          )}
         </div>
         <div className="min-h-[22px] flex items-center text-[11px] text-muted-foreground truncate">
-          <span>Total fisik <span className="font-semibold font-mono text-foreground">{Math.round(totalItems).toLocaleString("id-ID")}</span> unit di gudang</span>
+          <span>{isOwner ? `Total fisik ${Math.round(totalItems).toLocaleString("id-ID")} unit di gudang` : `${totalProducts} jenis produk terdaftar`}</span>
         </div>
       </div>
 
@@ -152,41 +162,43 @@ export function InventoryKpiSummary({
         </div>
       </div>
 
-      {/* CARD 3: KLASIFIKASI ABC */}
-      <div 
-        onClick={onSelectAbcTab}
-        className="border border-border/60 bg-gradient-to-b from-card via-card to-blue-50/80 dark:bg-card dark:bg-none rounded-xl p-5 hover:border-border transition-all shadow-2xs cursor-pointer group flex flex-col justify-between"
-      >
-        <div className="flex items-center justify-between h-6">
-          <span className="text-xs font-medium text-muted-foreground">Klasifikasi ABC</span>
-          <div className="inline-flex items-center px-2 py-0.5 rounded-md border border-border/60 bg-muted/40 text-[11px] font-semibold font-mono text-foreground">
-            <span>Pareto</span>
+      {/* CARD 3: KLASIFIKASI ABC (Khusus Pemilik Usaha) */}
+      {isOwner && (
+        <div 
+          onClick={onSelectAbcTab}
+          className="border border-border/60 bg-gradient-to-b from-card via-card to-blue-50/80 dark:bg-card dark:bg-none rounded-xl p-5 hover:border-border transition-all shadow-2xs cursor-pointer group flex flex-col justify-between"
+        >
+          <div className="flex items-center justify-between h-6">
+            <span className="text-xs font-medium text-muted-foreground">Klasifikasi ABC</span>
+            <div className="inline-flex items-center px-2 py-0.5 rounded-md border border-border/60 bg-muted/40 text-[11px] font-semibold font-mono text-foreground">
+              <span>Pareto</span>
+            </div>
+          </div>
+          <div className="my-2.5 h-8 flex items-center">
+            <div className="flex items-baseline gap-2.5 font-mono">
+              <span className="font-extrabold text-xl sm:text-2xl text-[#F1416C]">
+                <span className="text-xs font-normal text-muted-foreground mr-0.5">A:</span>
+                {abc.A}
+              </span>
+              <span className="font-extrabold text-xl sm:text-2xl text-[#F79417]">
+                <span className="text-xs font-normal text-muted-foreground mr-0.5">B:</span>
+                {abc.B}
+              </span>
+              <span className="font-extrabold text-xl sm:text-2xl text-[#50CD89]">
+                <span className="text-xs font-normal text-muted-foreground mr-0.5">C:</span>
+                {abc.C}
+              </span>
+            </div>
+          </div>
+          <div className="min-h-[22px] flex items-center text-[11px] text-muted-foreground truncate">
+            {abc.unclassified > 0 ? (
+              <span><span className="font-semibold font-mono text-foreground">{abc.unclassified}</span> produk belum dianalisis</span>
+            ) : (
+              <span>Klasifikasi ABC optimal</span>
+            )}
           </div>
         </div>
-        <div className="my-2.5 h-8 flex items-center">
-          <div className="flex items-baseline gap-2.5 font-mono">
-            <span className="font-extrabold text-xl sm:text-2xl text-[#F1416C]">
-              <span className="text-xs font-normal text-muted-foreground mr-0.5">A:</span>
-              {abc.A}
-            </span>
-            <span className="font-extrabold text-xl sm:text-2xl text-[#F79417]">
-              <span className="text-xs font-normal text-muted-foreground mr-0.5">B:</span>
-              {abc.B}
-            </span>
-            <span className="font-extrabold text-xl sm:text-2xl text-[#50CD89]">
-              <span className="text-xs font-normal text-muted-foreground mr-0.5">C:</span>
-              {abc.C}
-            </span>
-          </div>
-        </div>
-        <div className="min-h-[22px] flex items-center text-[11px] text-muted-foreground truncate">
-          {abc.unclassified > 0 ? (
-            <span><span className="font-semibold font-mono text-foreground">{abc.unclassified}</span> produk belum dianalisis</span>
-          ) : (
-            <span>Klasifikasi ABC optimal</span>
-          )}
-        </div>
-      </div>
+      )}
 
       {/* CARD 4: MUTASI STOK HARI INI */}
       <div className="border border-border/60 bg-gradient-to-b from-card via-card to-blue-50/80 dark:bg-card dark:bg-none rounded-xl p-5 hover:border-border transition-all shadow-2xs flex flex-col justify-between">

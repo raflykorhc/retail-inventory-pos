@@ -94,8 +94,11 @@ import {
 
 import { useSalesSummary, useSales } from "@/hooks/queries/useSales"
 import { TransactionDetailModal } from "./components/TransactionDetailModal"
+import { useAuthStore, isOwnerRole } from "@/store/useAuthStore"
 
 export default function ReportsPage() {
+  const user = useAuthStore((state) => state.user)
+  const isOwner = isOwnerRole(user?.role)
   const [timeRange, setTimeRange] = React.useState("30d")
   const [customDateRange, setCustomDateRange] = React.useState<DateRange | undefined>({
     from: new Date(new Date().setDate(new Date().getDate() - 30)),
@@ -152,7 +155,7 @@ export default function ReportsPage() {
     };
   }, [timeRange, customDateRange]);
 
-  const { data: summaryData, isLoading: isSummaryLoading, refetch: refetchSummary } = useSalesSummary(dateFilters);
+  const { data: summaryData, isLoading: isSummaryLoading, refetch: refetchSummary } = useSalesSummary(dateFilters, { enabled: isOwner });
   const { data: salesResponse, isLoading: isSalesLoading, refetch: refetchSales } = useSales({
     ...dateFilters,
     page: txPage,
@@ -161,10 +164,14 @@ export default function ReportsPage() {
   });
 
   const salesData = salesResponse?.items || [];
-  const isLoading = isSummaryLoading || isSalesLoading;
+  const isLoading = (isOwner && isSummaryLoading) || isSalesLoading;
 
   const handleRefresh = async () => {
-    await Promise.all([refetchSummary(), refetchSales()]);
+    if (isOwner) {
+      await Promise.all([refetchSummary(), refetchSales()]);
+    } else {
+      await refetchSales();
+    }
     toast.success("Data Laporan Diperbarui", {
       description: "Semua data statistik dan grafik telah disinkronkan."
     })
@@ -402,25 +409,29 @@ export default function ReportsPage() {
                 <TooltipContent>Perbarui Data</TooltipContent>
               </Tooltip>
 
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleExportExcel}
-                className="h-8 px-2.5 gap-1.5 shadow-2xs border-emerald-600/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 font-medium text-xs"
-              >
-                <FileSpreadsheet className="size-3.5" />
-                <span>Excel</span>
-              </Button>
+              {isOwner && (
+                <>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleExportExcel}
+                    className="h-8 px-2.5 gap-1.5 shadow-2xs border-emerald-600/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 font-medium text-xs"
+                  >
+                    <FileSpreadsheet className="size-3.5" />
+                    <span>Excel</span>
+                  </Button>
 
-              <Button 
-                variant="default" 
-                size="sm" 
-                onClick={handleExportPDF}
-                className="h-8 px-3 gap-1.5 shadow-2xs font-medium text-xs transition-transform active:scale-[0.98]"
-              >
-                <Download className="size-3.5" />
-                <span>Export PDF</span>
-              </Button>
+                  <Button 
+                    variant="default" 
+                    size="sm" 
+                    onClick={handleExportPDF}
+                    className="h-8 px-3 gap-1.5 shadow-2xs font-medium text-xs transition-transform active:scale-[0.98]"
+                  >
+                    <Download className="size-3.5" />
+                    <span>Export PDF</span>
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -428,122 +439,183 @@ export default function ReportsPage() {
         {/* ========================================================================= */}
         {/* ROW 1: EXECUTIVE KPI SUMMARY CARDS */}
         {/* ========================================================================= */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          
-          {/* CARD 1: TOTAL OMZET */}
-          <div className="border border-border/60 bg-gradient-to-b from-card via-card to-blue-50/80 dark:bg-card dark:bg-none rounded-xl p-5 hover:border-border transition-all shadow-2xs">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">Total Omzet</span>
-              <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-border/60 bg-muted/40 text-[11px] font-semibold font-mono text-foreground">
-                <TrendingUp className="size-3 text-emerald-500" />
-                <span>+12.5%</span>
-              </div>
-            </div>
-            {isLoading ? (
-              <div className="space-y-2 mt-3">
-                <Skeleton className="h-8 w-36" />
-                <Skeleton className="h-4 w-28" />
-              </div>
-            ) : (
-              <>
-                <div className="mt-2 mb-3">
-                  <div className={cn("font-extrabold font-mono tracking-tight text-foreground transition-all", getFontSizeClass(totalRevenue))}>
-                    {formatCurrency(totalRevenue)}
-                  </div>
+        {!isOwner ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* CARD 1: TOTAL TRANSAKSI */}
+            <div className="border border-border/60 bg-gradient-to-b from-card via-card to-blue-50/80 dark:bg-card dark:bg-none rounded-xl p-5 hover:border-border transition-all shadow-2xs">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">Total Transaksi Kasir</span>
+                <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-border/60 bg-muted/40 text-[11px] font-semibold font-mono text-foreground">
+                  <TrendingUp className="size-3 text-purple-500" />
+                  <span>Riwayat</span>
                 </div>
-                <p className="text-xs text-muted-foreground">Total omzet kotor periode ini</p>
-              </>
-            )}
-          </div>
+              </div>
+              {isSalesLoading ? (
+                <div className="space-y-2 mt-3">
+                  <Skeleton className="h-8 w-36" />
+                  <Skeleton className="h-4 w-28" />
+                </div>
+              ) : (
+                <>
+                  <div className="mt-2 mb-3">
+                    <div className="font-extrabold font-mono tracking-tight text-foreground flex items-baseline gap-1.5 text-2xl sm:text-[28px]">
+                      <span>{totalTxCount}</span>
+                      <span className="text-sm font-normal text-muted-foreground">Trx</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate">
+                    Total transaksi kasir tercatat pada periode ini
+                  </p>
+                </>
+              )}
+            </div>
 
-          {/* CARD 2: ESTIMASI LABA */}
-          <div className="border border-border/60 bg-gradient-to-b from-card via-card to-blue-50/80 dark:bg-card dark:bg-none rounded-xl p-5 hover:border-border transition-all shadow-2xs">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">Estimasi Laba</span>
-              <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-border/60 bg-muted/40 text-[11px] font-semibold font-mono text-foreground">
-                <TrendingUp className="size-3 text-blue-500" />
-                <span>+{totalRevenue ? Math.round((grossProfit / totalRevenue) * 100) : 0}%</span>
-              </div>
-            </div>
-            {isLoading ? (
-              <div className="space-y-2 mt-3">
-                <Skeleton className="h-8 w-36" />
-                <Skeleton className="h-4 w-28" />
-              </div>
-            ) : (
-              <>
-                <div className="mt-2 mb-3">
-                  <div className={cn("font-extrabold font-mono tracking-tight text-foreground transition-all", getFontSizeClass(grossProfit))}>
-                    {formatCurrency(grossProfit)}
-                  </div>
+            {/* CARD 2: STATUS SISTEM */}
+            <div className="border border-border/60 bg-gradient-to-b from-card via-card to-blue-50/80 dark:bg-card dark:bg-none rounded-xl p-5 hover:border-border transition-all shadow-2xs">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">Status Transaksi Selesai</span>
+                <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-border/60 bg-muted/40 text-[11px] font-semibold font-mono text-foreground">
+                  <Badge variant="outline" className="text-[10px] text-emerald-600 bg-emerald-500/10 border-emerald-500/20">Aktif</Badge>
                 </div>
-                <p className="text-xs text-muted-foreground">Laba bersih dari estimasi HPP</p>
-              </>
-            )}
+              </div>
+              {isSalesLoading ? (
+                <div className="space-y-2 mt-3">
+                  <Skeleton className="h-8 w-36" />
+                  <Skeleton className="h-4 w-28" />
+                </div>
+              ) : (
+                <>
+                  <div className="mt-2 mb-3">
+                    <div className="font-extrabold font-mono tracking-tight text-foreground flex items-baseline gap-1.5 text-2xl sm:text-[28px]">
+                      <span>{recentTransactionsData.filter(t => t.status === "Selesai").length}</span>
+                      <span className="text-sm font-normal text-muted-foreground">Selesai</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate">
+                    Layanan kasir & transaksi operasional aktif
+                  </p>
+                </>
+              )}
+            </div>
           </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* CARD 1: TOTAL OMZET */}
+            <div className="border border-border/60 bg-gradient-to-b from-card via-card to-blue-50/80 dark:bg-card dark:bg-none rounded-xl p-5 hover:border-border transition-all shadow-2xs">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">Total Omzet</span>
+                <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-border/60 bg-muted/40 text-[11px] font-semibold font-mono text-foreground">
+                  <TrendingUp className="size-3 text-emerald-500" />
+                  <span>+12.5%</span>
+                </div>
+              </div>
+              {isLoading ? (
+                <div className="space-y-2 mt-3">
+                  <Skeleton className="h-8 w-36" />
+                  <Skeleton className="h-4 w-28" />
+                </div>
+              ) : (
+                <>
+                  <div className="mt-2 mb-3">
+                    <div className={cn("font-extrabold font-mono tracking-tight text-foreground transition-all", getFontSizeClass(totalRevenue))}>
+                      {formatCurrency(totalRevenue)}
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Total omzet kotor periode ini</p>
+                </>
+              )}
+            </div>
 
-          {/* CARD 3: TOTAL TRANSAKSI */}
-          <div className="border border-border/60 bg-gradient-to-b from-card via-card to-blue-50/80 dark:bg-card dark:bg-none rounded-xl p-5 hover:border-border transition-all shadow-2xs">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">Total Transaksi</span>
-              <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-border/60 bg-muted/40 text-[11px] font-semibold font-mono text-foreground">
-                <TrendingUp className="size-3 text-purple-500" />
-                <span>+12.5%</span>
-              </div>
-            </div>
-            {isLoading ? (
-              <div className="space-y-2 mt-3">
-                <Skeleton className="h-8 w-36" />
-                <Skeleton className="h-4 w-28" />
-              </div>
-            ) : (
-              <>
-                <div className="mt-2 mb-3">
-                  <div className={cn("font-extrabold font-mono tracking-tight text-foreground flex items-baseline gap-1.5 transition-all", getFontSizeClass(summaryData?.totalTransactions || 0))}>
-                    <span>{summaryData?.totalTransactions || 0}</span>
-                    <span className="text-sm font-normal text-muted-foreground">Trx</span>
-                  </div>
+            {/* CARD 2: ESTIMASI LABA */}
+            <div className="border border-border/60 bg-gradient-to-b from-card via-card to-blue-50/80 dark:bg-card dark:bg-none rounded-xl p-5 hover:border-border transition-all shadow-2xs">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">Estimasi Laba</span>
+                <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-border/60 bg-muted/40 text-[11px] font-semibold font-mono text-foreground">
+                  <TrendingUp className="size-3 text-blue-500" />
+                  <span>+{totalRevenue ? Math.round((grossProfit / totalRevenue) * 100) : 0}%</span>
                 </div>
-                <p className="text-xs text-muted-foreground truncate">
-                  AOV: <span className="font-semibold font-mono text-foreground">{formatCurrency(summaryData?.averageTransaction || 0)}</span>
-                </p>
-              </>
-            )}
-          </div>
+              </div>
+              {isLoading ? (
+                <div className="space-y-2 mt-3">
+                  <Skeleton className="h-8 w-36" />
+                  <Skeleton className="h-4 w-28" />
+                </div>
+              ) : (
+                <>
+                  <div className="mt-2 mb-3">
+                    <div className={cn("font-extrabold font-mono tracking-tight text-foreground transition-all", getFontSizeClass(grossProfit))}>
+                      {formatCurrency(grossProfit)}
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Laba bersih dari estimasi HPP</p>
+                </>
+              )}
+            </div>
 
-          {/* CARD 4: PRODUK TERJUAL */}
-          <div className="border border-border/60 bg-gradient-to-b from-card via-card to-blue-50/80 dark:bg-card dark:bg-none rounded-xl p-5 hover:border-border transition-all shadow-2xs">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">Produk Terjual</span>
-              <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-border/60 bg-muted/40 text-[11px] font-semibold font-mono text-foreground">
-                <TrendingUp className="size-3 text-amber-500" />
-                <span>+4.5%</span>
-              </div>
-            </div>
-            {isLoading ? (
-              <div className="space-y-2 mt-3">
-                <Skeleton className="h-8 w-36" />
-                <Skeleton className="h-4 w-28" />
-              </div>
-            ) : (
-              <>
-                <div className="mt-2 mb-3">
-                  <div className={cn("font-extrabold font-mono tracking-tight text-foreground flex items-baseline gap-1.5 transition-all", getFontSizeClass(summaryData?.productProfits?.reduce((sum: number, p: any) => sum + p.qty, 0) || 0))}>
-                    <span>{summaryData?.productProfits?.reduce((sum: number, p: any) => sum + p.qty, 0) || 0}</span>
-                    <span className="text-sm font-normal text-muted-foreground">Pcs</span>
-                  </div>
+            {/* CARD 3: TOTAL TRANSAKSI */}
+            <div className="border border-border/60 bg-gradient-to-b from-card via-card to-blue-50/80 dark:bg-card dark:bg-none rounded-xl p-5 hover:border-border transition-all shadow-2xs">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">Total Transaksi</span>
+                <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-border/60 bg-muted/40 text-[11px] font-semibold font-mono text-foreground">
+                  <TrendingUp className="size-3 text-purple-500" />
+                  <span>+12.5%</span>
                 </div>
-                <p className="text-xs text-muted-foreground truncate">
-                  Terdistribusi <span className="font-semibold font-mono text-foreground">{summaryData?.productProfits?.length || 0}</span> <span className="font-semibold text-foreground">varian</span> item
-                </p>
-              </>
-            )}
+              </div>
+              {isLoading ? (
+                <div className="space-y-2 mt-3">
+                  <Skeleton className="h-8 w-36" />
+                  <Skeleton className="h-4 w-28" />
+                </div>
+              ) : (
+                <>
+                  <div className="mt-2 mb-3">
+                    <div className={cn("font-extrabold font-mono tracking-tight text-foreground flex items-baseline gap-1.5 transition-all", getFontSizeClass(summaryData?.totalTransactions || 0))}>
+                      <span>{summaryData?.totalTransactions || 0}</span>
+                      <span className="text-sm font-normal text-muted-foreground">Trx</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate">
+                    AOV: <span className="font-semibold font-mono text-foreground">{formatCurrency(summaryData?.averageTransaction || 0)}</span>
+                  </p>
+                </>
+              )}
+            </div>
+
+            {/* CARD 4: PRODUK TERJUAL */}
+            <div className="border border-border/60 bg-gradient-to-b from-card via-card to-blue-50/80 dark:bg-card dark:bg-none rounded-xl p-5 hover:border-border transition-all shadow-2xs">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">Produk Terjual</span>
+                <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-border/60 bg-muted/40 text-[11px] font-semibold font-mono text-foreground">
+                  <TrendingUp className="size-3 text-amber-500" />
+                  <span>+4.5%</span>
+                </div>
+              </div>
+              {isLoading ? (
+                <div className="space-y-2 mt-3">
+                  <Skeleton className="h-8 w-36" />
+                  <Skeleton className="h-4 w-28" />
+                </div>
+              ) : (
+                <>
+                  <div className="mt-2 mb-3">
+                    <div className={cn("font-extrabold font-mono tracking-tight text-foreground flex items-baseline gap-1.5 transition-all", getFontSizeClass(summaryData?.productProfits?.reduce((sum: number, p: any) => sum + p.qty, 0) || 0))}>
+                      <span>{summaryData?.productProfits?.reduce((sum: number, p: any) => sum + p.qty, 0) || 0}</span>
+                      <span className="text-sm font-normal text-muted-foreground">Pcs</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate">
+                    Terdistribusi <span className="font-semibold font-mono text-foreground">{summaryData?.productProfits?.length || 0}</span> <span className="font-semibold text-foreground">varian</span> item
+                  </p>
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* ========================================================================= */}
-        {/* ROW 2: GRAPH & KATEGORI PRODUK BREAKDOWN */}
+        {/* ROW 2: GRAPH & KATEGORI PRODUK BREAKDOWN (HANYA PEMILIK USAHA) */}
         {/* ========================================================================= */}
+        {isOwner && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           
           {/* TREN PENJUALAN & LABA */}
@@ -663,6 +735,7 @@ export default function ReportsPage() {
             )}
           </Card>
         </div>
+        )}
 
         {/* ========================================================================= */}
         {/* ROW 3: DETAILED DATA ANALYTICS & TABBED TABLES */}
@@ -676,14 +749,18 @@ export default function ReportsPage() {
                 <FileText className="size-3.5" />
                 <span>Riwayat Transaksi</span>
               </TabsTrigger>
-              <TabsTrigger value="top-products" className="px-3 py-1.5 text-xs font-medium gap-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs rounded-md">
-                <Package className="size-3.5" />
-                <span>Produk Terlaris</span>
-              </TabsTrigger>
-              <TabsTrigger value="payment-methods" className="px-3 py-1.5 text-xs font-medium gap-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs rounded-md">
-                <CreditCard className="size-3.5" />
-                <span>Metode Pembayaran</span>
-              </TabsTrigger>
+              {isOwner && (
+                <>
+                  <TabsTrigger value="top-products" className="px-3 py-1.5 text-xs font-medium gap-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs rounded-md">
+                    <Package className="size-3.5" />
+                    <span>Produk Terlaris</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="payment-methods" className="px-3 py-1.5 text-xs font-medium gap-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs rounded-md">
+                    <CreditCard className="size-3.5" />
+                    <span>Metode Pembayaran</span>
+                  </TabsTrigger>
+                </>
+              )}
               <TabsTrigger value="peak-hours" className="px-3 py-1.5 text-xs font-medium gap-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs rounded-md">
                 <BarChart3 className="size-3.5" />
                 <span>Jam Sibuk</span>
@@ -813,119 +890,123 @@ export default function ReportsPage() {
           </TabsContent>
 
           {/* TAB 2: PRODUK TERLARIS */}
-          <TabsContent value="top-products" className="m-0">
-            <div className="rounded-md border bg-card overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[70px] text-center text-xs">No.</TableHead>
-                    <TableHead className="text-xs">Nama Produk</TableHead>
-                    <TableHead className="text-xs">Kategori</TableHead>
-                    <TableHead className="text-right text-xs">Unit Terjual</TableHead>
-                    <TableHead className="text-right text-xs">Total HPP</TableHead>
-                    <TableHead className="text-right text-xs">Margin %</TableHead>
-                    <TableHead className="text-right text-xs">Total Revenue</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {topProductsData.length === 0 && !isLoading ? (
+          {isOwner && (
+            <TabsContent value="top-products" className="m-0">
+              <div className="rounded-md border bg-card overflow-hidden">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={7} className="h-24 text-center text-xs text-muted-foreground">Belum ada data penjualan produk</TableCell>
+                      <TableHead className="w-[70px] text-center text-xs">No.</TableHead>
+                      <TableHead className="text-xs">Nama Produk</TableHead>
+                      <TableHead className="text-xs">Kategori</TableHead>
+                      <TableHead className="text-right text-xs">Unit Terjual</TableHead>
+                      <TableHead className="text-right text-xs">Total HPP</TableHead>
+                      <TableHead className="text-right text-xs">Margin %</TableHead>
+                      <TableHead className="text-right text-xs">Total Revenue</TableHead>
                     </TableRow>
-                  ) : topProductsData.map((prd: any, index: number) => (
-                    <TableRow key={prd.id}>
-                      <TableCell className="text-center font-bold text-xs">
-                        <Badge 
-                          variant={index === 0 ? "default" : "outline"} 
-                          className={cn(
-                            "size-5 rounded-full p-0 flex items-center justify-center mx-auto text-[10px] font-bold",
-                            index === 0 && "bg-amber-500 hover:bg-amber-600 text-white"
-                          )}
-                        >
-                          {index + 1}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-semibold text-xs">
-                        {prd.name}
-                        <span className="block text-[10px] font-mono text-muted-foreground font-normal">{prd.id}</span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="text-[11px] font-normal py-0 px-1.5">
-                          {prd.category || 'Umum'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right font-mono font-semibold text-xs">
-                        {prd.soldQty} <span className="text-[10px] font-normal text-muted-foreground">{prd.baseUnit}</span>
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-xs text-muted-foreground">
-                        {formatCurrency(prd.cost)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
-                        {prd.margin}
-                      </TableCell>
-                      <TableCell className="text-right font-mono font-bold text-xs text-foreground">
-                        {formatCurrency(prd.revenue)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </TabsContent>
-
-          {/* TAB 3: METODE PEMBAYARAN */}
-          <TabsContent value="payment-methods" className="m-0">
-            <div className="rounded-md border bg-card overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-xs">Kanal Pembayaran</TableHead>
-                    <TableHead className="text-right text-xs">Jumlah Transaksi</TableHead>
-                    <TableHead className="w-[30%] text-xs">Kontribusi (%)</TableHead>
-                    <TableHead className="text-right text-xs">Total Nilai</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paymentMethodsData.length === 0 && !isLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="h-24 text-center text-xs text-muted-foreground">Belum ada data pembayaran</TableCell>
-                    </TableRow>
-                  ) : paymentMethodsData.map((pm: any, idx: number) => {
-                    const IconComponent = pm.icon
-                    return (
-                      <TableRow key={idx}>
-                        <TableCell className="font-semibold text-xs">
-                          <div className="flex items-center gap-2">
-                            <span className="p-1.5 rounded-md bg-muted text-foreground">
-                              <IconComponent className="size-3.5" style={{ color: pm.color }} />
-                            </span>
-                            <span>{pm.name}</span>
-                          </div>
+                  </TableHeader>
+                  <TableBody>
+                    {topProductsData.length === 0 && !isLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="h-24 text-center text-xs text-muted-foreground">Belum ada data penjualan produk</TableCell>
+                      </TableRow>
+                    ) : topProductsData.map((prd: any, index: number) => (
+                      <TableRow key={prd.id}>
+                        <TableCell className="text-center font-bold text-xs">
+                          <Badge 
+                            variant={index === 0 ? "default" : "outline"} 
+                            className={cn(
+                              "size-5 rounded-full p-0 flex items-center justify-center mx-auto text-[10px] font-bold",
+                              index === 0 && "bg-amber-500 hover:bg-amber-600 text-white"
+                            )}
+                          >
+                            {index + 1}
+                          </Badge>
                         </TableCell>
-                        <TableCell className="text-right font-mono text-xs">
-                          {pm.count > 0 ? `${pm.count} Trx` : '-'}
+                        <TableCell className="font-semibold text-xs">
+                          {prd.name}
+                          <span className="block text-[10px] font-mono text-muted-foreground font-normal">{prd.id}</span>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-full bg-muted h-2 rounded-full overflow-hidden">
-                              <div 
-                                className="h-full rounded-full transition-all duration-500" 
-                                style={{ width: `${pm.share}%`, backgroundColor: pm.color }} 
-                              />
-                            </div>
-                            <span className="text-xs font-mono font-semibold w-7">{pm.share}%</span>
-                          </div>
+                          <Badge variant="secondary" className="text-[11px] font-normal py-0 px-1.5">
+                            {prd.category || 'Umum'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-mono font-semibold text-xs">
+                          {prd.soldQty} <span className="text-[10px] font-normal text-muted-foreground">{prd.baseUnit}</span>
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                          {formatCurrency(prd.cost)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
+                          {prd.margin}
                         </TableCell>
                         <TableCell className="text-right font-mono font-bold text-xs text-foreground">
-                          {formatCurrency(pm.value)}
+                          {formatCurrency(prd.revenue)}
                         </TableCell>
                       </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          </TabsContent>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+          )}
+
+          {/* TAB 3: METODE PEMBAYARAN */}
+          {isOwner && (
+            <TabsContent value="payment-methods" className="m-0">
+              <div className="rounded-md border bg-card overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Kanal Pembayaran</TableHead>
+                      <TableHead className="text-right text-xs">Jumlah Transaksi</TableHead>
+                      <TableHead className="w-[30%] text-xs">Kontribusi (%)</TableHead>
+                      <TableHead className="text-right text-xs">Total Nilai</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paymentMethodsData.length === 0 && !isLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="h-24 text-center text-xs text-muted-foreground">Belum ada data pembayaran</TableCell>
+                      </TableRow>
+                    ) : paymentMethodsData.map((pm: any, idx: number) => {
+                      const IconComponent = pm.icon
+                      return (
+                        <TableRow key={idx}>
+                          <TableCell className="font-semibold text-xs">
+                            <div className="flex items-center gap-2">
+                              <span className="p-1.5 rounded-md bg-muted text-foreground">
+                                <IconComponent className="size-3.5" style={{ color: pm.color }} />
+                              </span>
+                              <span>{pm.name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs">
+                            {pm.count > 0 ? `${pm.count} Trx` : '-'}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-full bg-muted h-2 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full rounded-full transition-all duration-500" 
+                                  style={{ width: `${pm.share}%`, backgroundColor: pm.color }} 
+                                />
+                              </div>
+                              <span className="text-xs font-mono font-semibold w-7">{pm.share}%</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-mono font-bold text-xs text-foreground">
+                            {formatCurrency(pm.value)}
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+          )}
 
           {/* TAB 4: ANALISIS JAM SIBUK */}
           <TabsContent value="peak-hours" className="m-0">

@@ -23,6 +23,7 @@ interface CartItem {
   mainFactor?: number;
   name: string;
   price: number;
+  originalPrice?: number;
   quantity: number;
   image: string;
   unit?: string;
@@ -30,6 +31,9 @@ interface CartItem {
   prices?: any[];
   selectedPriceId?: string | number;
   unitId?: string;
+  isBonus?: boolean;
+  costPrice?: number;
+  averageCost?: number;
 }
 
 interface HeldCart {
@@ -66,7 +70,8 @@ export default function POSPage() {
     const qtyToAdd = product.customQuantity || 1;
 
     setCart((prev) => {
-      const existingInPrev = prev.find((item) => getCartItemId(item) === targetItemId);
+      // Cari item existing yang BUKAN barang bonus (karena dari katalog adalah pembelian reguler)
+      const existingInPrev = prev.find((item) => getCartItemId(item) === targetItemId && !item.isBonus);
 
       if (existingInPrev) {
         const activePrices = existingInPrev.prices || product.prices;
@@ -80,7 +85,7 @@ export default function POSPage() {
         }
 
         return prev.map((item) =>
-          getCartItemId(item) === targetItemId
+          (getCartItemId(item) === targetItemId && !item.isBonus)
             ? { ...item, quantity: item.quantity + qtyToAdd }
             : item
         );
@@ -107,7 +112,11 @@ export default function POSPage() {
         cartItemId: targetItemId,
         quantity: qtyToAdd,
         prices: product.prices || [],
-        selectedPriceId
+        selectedPriceId,
+        isBonus: false,
+        originalPrice: product.price,
+        costPrice: Number(product.costPrice || product.averageCost || 0),
+        averageCost: Number(product.averageCost || 0),
       }];
     });
   };
@@ -205,7 +214,8 @@ export default function POSPage() {
 
             return {
               ...item,
-              price: newPrice,
+              price: item.isBonus ? 0 : newPrice,
+              originalPrice: newPrice,
               unit: unitName,
               unitId: selectedPrice.unitId || selectedPrice.id,
               selectedPriceId: selectedPrice.id,
@@ -217,6 +227,85 @@ export default function POSPage() {
         return item;
       })
     );
+  };
+
+  const handleToggleBonus = (cartItemId: string | number) => {
+    setCart((prev) => {
+      const itemIndex = prev.findIndex((i) => getCartItemId(i) === String(cartItemId));
+      if (itemIndex === -1) return prev;
+
+      const item = prev[itemIndex];
+      const nextIsBonus = !item.isBonus;
+
+      if (nextIsBonus) {
+        const originalPrice = item.originalPrice !== undefined ? item.originalPrice : item.price;
+        const bonusCartItemId = item.cartItemId?.includes("-bonus") 
+          ? item.cartItemId 
+          : `${getCartItemId(item)}-bonus-${Date.now()}`;
+
+        toast.success("Ditandai sebagai Barang Bonus", {
+          description: `${item.name} sekarang berstatus gratis (Rp 0).`
+        });
+
+        const updatedCart = [...prev];
+        updatedCart[itemIndex] = {
+          ...item,
+          cartItemId: bonusCartItemId,
+          isBonus: true,
+          price: 0,
+          originalPrice: originalPrice
+        };
+        return updatedCart;
+      } else {
+        const restoredPrice = item.originalPrice !== undefined ? item.originalPrice : (item.prices?.[0]?.price || item.price);
+        
+        toast.info("Status Bonus Dibatalkan", {
+          description: `Harga ${item.name} dikembalikan ke normal.`
+        });
+
+        const updatedCart = [...prev];
+        updatedCart[itemIndex] = {
+          ...item,
+          isBonus: false,
+          price: restoredPrice
+        };
+        return updatedCart;
+      }
+    });
+  };
+
+  const handleSplitBonus = (cartItemId: string | number) => {
+    setCart((prev) => {
+      const itemIndex = prev.findIndex((i) => getCartItemId(i) === String(cartItemId));
+      if (itemIndex === -1) return prev;
+
+      const item = prev[itemIndex];
+      if (item.quantity <= 1 || item.isBonus) return prev;
+
+      const originalPrice = item.originalPrice !== undefined ? item.originalPrice : item.price;
+      const bonusCartItemId = `${getCartItemId(item)}-bonus-${Date.now()}`;
+
+      toast.success("1x Dipisahkan sebagai Barang Bonus", {
+        description: `1 item ${item.name} dijadikan bonus (Rp 0).`
+      });
+
+      const updatedCart = [...prev];
+      updatedCart[itemIndex] = {
+        ...item,
+        quantity: item.quantity - 1
+      };
+
+      const bonusItem: CartItem = {
+        ...item,
+        cartItemId: bonusCartItemId,
+        quantity: 1,
+        isBonus: true,
+        price: 0,
+        originalPrice: originalPrice
+      };
+
+      return [...updatedCart, bonusItem];
+    });
   };
 
   const handleRemoveItem = (cartItemId: string | number) => {
@@ -236,7 +325,7 @@ export default function POSPage() {
       name: `Transaksi #${heldCarts.length + 1}`,
       timestamp: new Date(),
       cart: [...cart],
-      total: cart.reduce((acc, i) => acc + i.price * i.quantity, 0)
+      total: cart.reduce((acc, i) => acc + (i.isBonus ? 0 : i.price) * i.quantity, 0)
     };
     setHeldCarts((prev) => [newHeldCart, ...prev]);
     setCart([]);
@@ -273,11 +362,11 @@ export default function POSPage() {
           productId: item.id,
           batchId: item.batchId || null,
           quantity: item.quantity,
-          price: item.price,
+          price: item.isBonus ? 0 : item.price,
           unitId: item.prices?.find((p: any) => String(p.id) === String(item.selectedPriceId))?.unitId || item.unitId || item.prices?.[0]?.unitId || null,
-          isBonus: false
+          isBonus: Boolean(item.isBonus)
         })),
-        totalAmount: checkoutData.totalAmount || cart.reduce((acc, item) => acc + item.price * item.quantity, 0),
+        totalAmount: checkoutData.totalAmount || cart.reduce((acc, item) => acc + (item.isBonus ? 0 : item.price) * item.quantity, 0),
         paymentMethod: checkoutData.paymentMethod || "TUNAI",
         transactionDate: checkoutData.transactionDate?.toISOString(),
         amountPaid: checkoutData.amountPaid,
@@ -362,6 +451,8 @@ export default function POSPage() {
           onOpenHeldCarts={() => setIsHeldCartsOpen(true)}
           isPaymentPhaseState={isPaymentPhaseState}
           setIsPaymentPhaseState={setIsPaymentPhaseState}
+          onToggleBonus={handleToggleBonus}
+          onSplitBonus={handleSplitBonus}
         />
       </div>
 
@@ -398,9 +489,16 @@ export default function POSPage() {
                         {format(item.timestamp, "HH:mm:ss - d MMM yyyy", { locale: id })}
                       </span>
                     </div>
-                    <Badge variant="outline" className="text-[10px] font-mono">
-                      {item.cart.length} Item
-                    </Badge>
+                    <div className="flex items-center gap-1.5">
+                      {item.cart.some(c => c.isBonus) && (
+                        <Badge variant="outline" className="text-[9px] font-semibold bg-emerald-500/10 text-emerald-600 border-emerald-500/20 px-1 py-0">
+                          Ada Bonus
+                        </Badge>
+                      )}
+                      <Badge variant="outline" className="text-[10px] font-mono">
+                        {item.cart.length} Item
+                      </Badge>
+                    </div>
                   </div>
 
                   <div className="text-xs font-bold text-foreground">

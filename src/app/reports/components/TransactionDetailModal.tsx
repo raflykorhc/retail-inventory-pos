@@ -57,6 +57,7 @@ import { useSettingsStore } from "@/store/useSettingsStore";
 import { PrinterService } from "@/services/printerService";
 import { handlePrintInvoice } from "@/lib/printUtils";
 import { useSaleDetail } from "@/hooks/queries/useSales";
+import { useAuthStore, isOwnerRole } from "@/store/useAuthStore";
 
 interface TransactionDetailModalProps {
   isOpen: boolean;
@@ -72,6 +73,8 @@ export function TransactionDetailModal({
   const [copiedInvoice, setCopiedInvoice] = useState(false);
   const [isPrintingThermal, setIsPrintingThermal] = useState(false);
   const settings = useSettingsStore((state) => state.settings);
+  const user = useAuthStore((state) => state.user);
+  const isOwner = isOwnerRole(user?.role);
 
   // Fetch full details if initialSale only has partial data or to get latest batch allocations
   const saleIdentifier = initialSale?.id || initialSale?.invoiceNumber || initialSale?.invoice;
@@ -442,7 +445,9 @@ export function TransactionDetailModal({
               </div>
 
               <DialogDescription className="text-xs text-muted-foreground pt-1">
-                Rincian item penjualan, margin laba per barang, dan rekapitulasi pembayaran.
+                {isOwner
+                  ? "Rincian item penjualan, margin laba per barang, dan rekapitulasi pembayaran."
+                  : "Rincian item penjualan dan rekapitulasi pembayaran."}
               </DialogDescription>
             </DialogHeader>
 
@@ -489,7 +494,7 @@ export function TransactionDetailModal({
               </div>
 
               {/* 2. FINANCIAL KPI CARDS GRID */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className={cn("grid gap-3", isOwner ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2")}>
                 {/* Card 1: Total Omzet */}
                 <div className="bg-card p-3.5 rounded-lg border border-border/80 shadow-2xs flex flex-col justify-between h-[76px]">
                   <div className="flex items-center justify-between">
@@ -502,47 +507,51 @@ export function TransactionDetailModal({
                 </div>
 
                 {/* Card 2: Total HPP */}
-                <div className="bg-card p-3.5 rounded-lg border border-border/80 shadow-2xs flex flex-col justify-between h-[76px]">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-medium text-muted-foreground">Total Modal (HPP)</span>
-                    <Layers className="size-3.5 text-muted-foreground opacity-80" />
+                {isOwner && (
+                  <div className="bg-card p-3.5 rounded-lg border border-border/80 shadow-2xs flex flex-col justify-between h-[76px]">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-medium text-muted-foreground">Total Modal (HPP)</span>
+                      <Layers className="size-3.5 text-muted-foreground opacity-80" />
+                    </div>
+                    <p className="text-sm sm:text-base font-mono font-bold text-muted-foreground truncate">
+                      {formatCurrency(calculation.totalCost)}
+                    </p>
                   </div>
-                  <p className="text-sm sm:text-base font-mono font-bold text-muted-foreground truncate">
-                    {formatCurrency(calculation.totalCost)}
-                  </p>
-                </div>
+                )}
 
                 {/* Card 3: Total Laba */}
-                <div className={cn(
-                  "p-3.5 rounded-lg border shadow-2xs flex flex-col justify-between h-[76px] transition-colors",
-                  isProfitPositive 
-                    ? "bg-emerald-500/5 border-emerald-500/30" 
-                    : "bg-destructive/5 border-destructive/30"
-                )}>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-medium text-foreground">Total Laba</span>
-                    <TrendingUp className={cn("size-3.5", isProfitPositive ? "text-emerald-500" : "text-destructive")} />
+                {isOwner && (
+                  <div className={cn(
+                    "p-3.5 rounded-lg border shadow-2xs flex flex-col justify-between h-[76px] transition-colors",
+                    isProfitPositive 
+                      ? "bg-emerald-500/5 border-emerald-500/30" 
+                      : "bg-destructive/5 border-destructive/30"
+                  )}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-medium text-foreground">Total Laba</span>
+                      <TrendingUp className={cn("size-3.5", isProfitPositive ? "text-emerald-500" : "text-destructive")} />
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className={cn(
+                        "text-sm sm:text-base font-mono font-bold truncate",
+                        isProfitPositive ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"
+                      )}>
+                        {isProfitPositive ? "+" : ""}{formatCurrency(calculation.totalProfit)}
+                      </p>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-[9px] px-1 py-0 font-semibold font-mono",
+                          isProfitPositive 
+                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" 
+                            : "bg-destructive/10 text-destructive border-destructive/20"
+                        )}
+                      >
+                        {calculation.marginPercent >= 0 ? "+" : ""}{calculation.marginPercent.toFixed(1)}%
+                      </Badge>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <p className={cn(
-                      "text-sm sm:text-base font-mono font-bold truncate",
-                      isProfitPositive ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"
-                    )}>
-                      {isProfitPositive ? "+" : ""}{formatCurrency(calculation.totalProfit)}
-                    </p>
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "text-[9px] px-1 py-0 font-semibold font-mono",
-                        isProfitPositive 
-                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" 
-                          : "bg-destructive/10 text-destructive border-destructive/20"
-                      )}
-                    >
-                      {calculation.marginPercent >= 0 ? "+" : ""}{calculation.marginPercent.toFixed(1)}%
-                    </Badge>
-                  </div>
-                </div>
+                )}
 
                 {/* Card 4: Total Qty / Produk */}
                 <div className="bg-card p-3.5 rounded-lg border border-border/80 shadow-2xs flex flex-col justify-between h-[76px]">
@@ -566,7 +575,7 @@ export function TransactionDetailModal({
                 <div className="flex items-center justify-between px-0.5">
                   <h3 className="text-xs font-bold text-foreground flex items-center gap-1.5">
                     <Package className="size-3.5 text-primary" />
-                    <span>Rincian Produk & Laba per Item</span>
+                    <span>{isOwner ? "Rincian Produk & Laba per Item" : "Rincian Produk"}</span>
                   </h3>
                   <span className="text-[11px] font-medium text-muted-foreground font-mono">
                     {calculation.items.length} jenis produk
@@ -581,24 +590,26 @@ export function TransactionDetailModal({
                         <TableHead className="text-xs min-w-[170px]">Nama Produk</TableHead>
                         <TableHead className="text-center text-xs w-[100px]">Qty</TableHead>
                         <TableHead className="text-right text-xs">Harga Jual</TableHead>
-                        <TableHead className="text-right text-xs">HPP Satuan</TableHead>
+                        {isOwner && <TableHead className="text-right text-xs">HPP Satuan</TableHead>}
                         <TableHead className="text-right text-xs">Subtotal</TableHead>
-                        <TableHead className="text-right text-xs min-w-[130px] font-semibold text-foreground">
-                          Laba / Margin
-                        </TableHead>
+                        {isOwner && (
+                          <TableHead className="text-right text-xs min-w-[130px] font-semibold text-foreground">
+                            Laba / Margin
+                          </TableHead>
+                        )}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {isFetchingDetail && calculation.items.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={7} className="h-28 text-center text-xs text-muted-foreground">
+                          <TableCell colSpan={isOwner ? 7 : 5} className="h-28 text-center text-xs text-muted-foreground">
                             <Loader2 className="size-5 animate-spin mx-auto mb-2 text-primary" />
                             Memuat rincian produk...
                           </TableCell>
                         </TableRow>
                       ) : calculation.items.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={7} className="h-20 text-center text-xs text-muted-foreground">
+                          <TableCell colSpan={isOwner ? 7 : 5} className="h-20 text-center text-xs text-muted-foreground">
                             Tidak ada rincian item pada transaksi ini.
                           </TableCell>
                         </TableRow>
@@ -652,31 +663,33 @@ export function TransactionDetailModal({
                               </TableCell>
 
                               {/* HPP Satuan */}
-                              <TableCell className="text-right font-mono text-xs text-muted-foreground">
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger
-                                      render={
-                                        <span className="cursor-help">
-                                          {formatCurrency(item.unitCost)}
-                                        </span>
-                                      }
-                                    />
-                                    <TooltipContent side="top" className="text-xs">
-                                      <p className="font-medium">Sumber HPP: {item.costSource}</p>
-                                      {item.batchAllocations?.length > 0 && (
-                                        <div className="mt-1 text-[11px] space-y-0.5">
-                                          {item.batchAllocations.map((b: any, bIdx: number) => (
-                                            <div key={bIdx}>
-                                              Alokasi {b.quantity} item @ {formatCurrency(Number(b.costPrice))}
-                                            </div>
-                                          ))}
-                                        </div>
-                                      )}
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              </TableCell>
+                              {isOwner && (
+                                <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger
+                                        render={
+                                          <span className="cursor-help">
+                                            {formatCurrency(item.unitCost)}
+                                          </span>
+                                        }
+                                      />
+                                      <TooltipContent side="top" className="text-xs">
+                                        <p className="font-medium">Sumber HPP: {item.costSource}</p>
+                                        {item.batchAllocations?.length > 0 && (
+                                          <div className="mt-1 text-[11px] space-y-0.5">
+                                            {item.batchAllocations.map((b: any, bIdx: number) => (
+                                              <div key={bIdx}>
+                                                Alokasi {b.quantity} item @ {formatCurrency(Number(b.costPrice))}
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                </TableCell>
+                              )}
 
                               {/* Subtotal */}
                               <TableCell className="text-right font-mono font-semibold text-xs text-foreground">
@@ -684,27 +697,29 @@ export function TransactionDetailModal({
                               </TableCell>
 
                               {/* LABA & MARGIN PER ITEM */}
-                              <TableCell className="text-right">
-                                <div className="flex flex-col items-end gap-0.5">
-                                  <span className={cn(
-                                    "font-mono font-bold text-xs",
-                                    isItemProfitPositive ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"
-                                  )}>
-                                    {isItemProfitPositive ? "+" : ""}{formatCurrency(item.itemProfit)}
-                                  </span>
-                                  <Badge
-                                    variant="outline"
-                                    className={cn(
-                                      "text-[9px] px-1 py-0 font-semibold font-mono",
-                                      isItemProfitPositive 
-                                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" 
-                                        : "bg-destructive/10 text-destructive border-destructive/20"
-                                    )}
-                                  >
-                                    {item.itemMargin >= 0 ? "+" : ""}{item.itemMargin.toFixed(1)}%
-                                  </Badge>
-                                </div>
-                              </TableCell>
+                              {isOwner && (
+                                <TableCell className="text-right">
+                                  <div className="flex flex-col items-end gap-0.5">
+                                    <span className={cn(
+                                      "font-mono font-bold text-xs",
+                                      isItemProfitPositive ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"
+                                    )}>
+                                      {isItemProfitPositive ? "+" : ""}{formatCurrency(item.itemProfit)}
+                                    </span>
+                                    <Badge
+                                      variant="outline"
+                                      className={cn(
+                                        "text-[9px] px-1 py-0 font-semibold font-mono",
+                                        isItemProfitPositive 
+                                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" 
+                                          : "bg-destructive/10 text-destructive border-destructive/20"
+                                      )}
+                                    >
+                                      {item.itemMargin >= 0 ? "+" : ""}{item.itemMargin.toFixed(1)}%
+                                    </Badge>
+                                  </div>
+                                </TableCell>
+                              )}
                             </TableRow>
                           );
                         })
