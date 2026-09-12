@@ -52,6 +52,7 @@ import {
 } from "lucide-react";
 import axiosClient from "@/lib/axiosClient";
 import { BatchProfitReportModal } from "./BatchProfitReportModal";
+import { useAuthStore, isOwnerRole } from "@/store/useAuthStore";
 
 interface BatchLogModalProps {
   isOpen: boolean;
@@ -60,6 +61,8 @@ interface BatchLogModalProps {
 }
 
 export function BatchLogModal({ isOpen, onClose, product }: BatchLogModalProps) {
+  const user = useAuthStore((state) => state.user);
+  const isOwner = isOwnerRole(user?.role);
   const [activeTab, setActiveTab] = useState("batches");
 
   // Pagination States
@@ -306,47 +309,49 @@ export function BatchLogModal({ isOpen, onClose, product }: BatchLogModalProps) 
                                   </span>
                                 )}
 
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger
-                                    render={
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-6 w-6 p-0 rounded-md hover:bg-muted/80 focus-visible:outline-none"
-                                        title="Menu Aksi Batch"
+                                {isOwner && (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger
+                                      render={
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-6 w-6 p-0 rounded-md hover:bg-muted/80 focus-visible:outline-none"
+                                          title="Menu Aksi Batch"
+                                        >
+                                          <MoreVertical className="h-3.5 w-3.5 text-muted-foreground" />
+                                        </Button>
+                                      }
+                                    />
+                                    <DropdownMenuContent align="end" className="w-48">
+                                      <DropdownMenuItem
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setReportBatch(batch);
+                                        }}
+                                        className="cursor-pointer"
                                       >
-                                        <MoreVertical className="h-3.5 w-3.5 text-muted-foreground" />
-                                      </Button>
-                                    }
-                                  />
-                                  <DropdownMenuContent align="end" className="w-48">
-                                    <DropdownMenuItem
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setReportBatch(batch);
-                                      }}
-                                      className="cursor-pointer"
-                                    >
-                                      <TrendingUp className="mr-2 h-3.5 w-3.5 text-emerald-500" />
-                                      <span>Laporan Laba Batch</span>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleOpenEdit(batch);
-                                      }}
-                                      className="cursor-pointer"
-                                    >
-                                      <Edit className="mr-2 h-3.5 w-3.5 text-blue-500" />
-                                      <span>Edit Harga Batch</span>
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
+                                        <TrendingUp className="mr-2 h-3.5 w-3.5 text-emerald-500" />
+                                        <span>Laporan Laba Batch</span>
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleOpenEdit(batch);
+                                        }}
+                                        className="cursor-pointer"
+                                      >
+                                        <Edit className="mr-2 h-3.5 w-3.5 text-blue-500" />
+                                        <span>Edit Harga Batch</span>
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                )}
                               </div>
                             </div>
 
-                            <div className="grid grid-cols-4 gap-1.5 text-center pt-3">
+                            <div className={cn("grid gap-1.5 text-center pt-3", isOwner ? "grid-cols-4" : "grid-cols-2")}>
                               <div className="flex flex-col items-center justify-center pr-1 border-r border-border/40 min-w-0">
                                 <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                                   Sisa / Awal {mainUnitName && `(${mainUnitName})`}
@@ -356,18 +361,20 @@ export function BatchLogModal({ isOpen, onClose, product }: BatchLogModalProps) 
                                 </p>
                               </div>
 
-                              <div className="flex flex-col items-center justify-center px-1 border-r border-border/40 min-w-0">
-                                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">H. Modal</p>
-                                <p className="font-bold text-xs sm:text-sm text-foreground truncate">
-                                  {new Intl.NumberFormat("id-ID", {
-                                    style: "currency",
-                                    currency: "IDR",
-                                    maximumFractionDigits: 0,
-                                  }).format(costPrice)}
-                                </p>
-                              </div>
+                              {isOwner && (
+                                <div className="flex flex-col items-center justify-center px-1 border-r border-border/40 min-w-0">
+                                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">H. Modal</p>
+                                  <p className="font-bold text-xs sm:text-sm text-foreground truncate">
+                                    {new Intl.NumberFormat("id-ID", {
+                                      style: "currency",
+                                      currency: "IDR",
+                                      maximumFractionDigits: 0,
+                                    }).format(costPrice)}
+                                  </p>
+                                </div>
+                              )}
 
-                              <div className="flex flex-col items-center justify-center px-1 border-r border-border/40 min-w-0">
+                              <div className={cn("flex flex-col items-center justify-center px-1 min-w-0", isOwner && "border-r border-border/40")}>
                                 <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">H. Jual</p>
                                 <p className="font-bold text-xs sm:text-sm text-foreground truncate">
                                   {new Intl.NumberFormat("id-ID", {
@@ -378,25 +385,27 @@ export function BatchLogModal({ isOpen, onClose, product }: BatchLogModalProps) 
                                 </p>
                               </div>
 
-                              <div className="flex flex-col items-center justify-center pl-1 min-w-0">
-                                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Laba Terjual</p>
-                                <p
-                                  className={`font-bold text-xs sm:text-sm truncate ${
-                                    (batch.realizedProfit || 0) > 0
-                                      ? "text-emerald-600 dark:text-emerald-400"
-                                      : (batch.realizedProfit || 0) < 0
-                                      ? "text-destructive"
-                                      : "text-muted-foreground"
-                                  }`}
-                                >
-                                  {(batch.realizedProfit || 0) > 0 ? "+" : ""}
-                                  {new Intl.NumberFormat("id-ID", {
-                                    style: "currency",
-                                    currency: "IDR",
-                                    maximumFractionDigits: 0,
-                                  }).format(batch.realizedProfit || 0)}
-                                </p>
-                              </div>
+                              {isOwner && (
+                                <div className="flex flex-col items-center justify-center pl-1 min-w-0">
+                                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Laba Terjual</p>
+                                  <p
+                                    className={`font-bold text-xs sm:text-sm truncate ${
+                                      (batch.realizedProfit || 0) > 0
+                                        ? "text-emerald-600 dark:text-emerald-400"
+                                        : (batch.realizedProfit || 0) < 0
+                                        ? "text-destructive"
+                                        : "text-muted-foreground"
+                                    }`}
+                                  >
+                                    {(batch.realizedProfit || 0) > 0 ? "+" : ""}
+                                    {new Intl.NumberFormat("id-ID", {
+                                      style: "currency",
+                                      currency: "IDR",
+                                      maximumFractionDigits: 0,
+                                    }).format(batch.realizedProfit || 0)}
+                                  </p>
+                                </div>
+                              )}
                             </div>
                           </div>
                         );
@@ -575,12 +584,13 @@ export function BatchLogModal({ isOpen, onClose, product }: BatchLogModalProps) 
       </Dialog>
 
       {/* Modal Dialog Edit Harga per Batch */}
-      <Dialog
-        open={!!editingBatch}
-        onOpenChange={(val) => {
-          if (!val) setEditingBatch(null);
-        }}
-      >
+      {isOwner && (
+        <Dialog
+          open={!!editingBatch}
+          onOpenChange={(val) => {
+            if (!val) setEditingBatch(null);
+          }}
+        >
         <DialogContent className="sm:max-w-[500px]">
           <form onSubmit={handleSaveEdit}>
             <DialogHeader>
@@ -723,13 +733,16 @@ export function BatchLogModal({ isOpen, onClose, product }: BatchLogModalProps) 
           </form>
         </DialogContent>
       </Dialog>
+      )}
       {/* Modal Laporan Laba Batch */}
-      <BatchProfitReportModal
-        isOpen={!!reportBatch}
-        onClose={() => setReportBatch(null)}
-        batchId={reportBatch?.id || null}
-        product={product}
-      />
+      {isOwner && (
+        <BatchProfitReportModal
+          isOpen={!!reportBatch}
+          onClose={() => setReportBatch(null)}
+          batchId={reportBatch?.id || null}
+          product={product}
+        />
+      )}
     </>
   );
 }

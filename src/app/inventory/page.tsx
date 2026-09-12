@@ -23,7 +23,7 @@ import * as XLSX from "xlsx";
 import { format } from "date-fns";
 
 import axiosClient from "@/lib/axiosClient";
-import { formatCurrency, formatMultiUnitStock, formatMultiUnitMinMax, getMainUnitCost, cn } from "@/lib/utils";
+import { formatCurrency, formatMultiUnitStock, formatBaseUnitStock, hasLargerUnit, formatMultiUnitMinMax, getMainUnitCost, cn } from "@/lib/utils";
 import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -80,9 +80,12 @@ import { ReorderSuggestionsTab } from "./components/ReorderSuggestionsTab";
 import { StockMovementLogsTab } from "./components/StockMovementLogsTab";
 import { AbcOptimizationReport } from "../reports/components/AbcOptimizationReport";
 import { useCategories, useSuppliers } from "@/hooks/queries/useMetadata";
+import { useAuthStore, isOwnerRole } from "@/store/useAuthStore";
 
 export default function InventoryPage() {
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+  const isOwner = isOwnerRole(user?.role);
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(() => searchParams.get("tab") || "catalog");
 
@@ -257,31 +260,35 @@ export default function InventoryPage() {
           <span>Katalog & Stok</span>
         </Button>
 
-        <Button
-          variant={activeTab === "abc-optimization" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setActiveTab("abc-optimization")}
-          className={cn(
-            "h-8 px-3.5 gap-2 text-xs font-semibold rounded-lg transition-all",
-            activeTab === "abc-optimization" ? "shadow-xs" : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <Boxes className="size-3.5" />
-          <span>Klasifikasi ABC & Stok Min-Max</span>
-        </Button>
+        {isOwner && (
+          <>
+            <Button
+              variant={activeTab === "abc-optimization" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveTab("abc-optimization")}
+              className={cn(
+                "h-8 px-3.5 gap-2 text-xs font-semibold rounded-lg transition-all",
+                activeTab === "abc-optimization" ? "shadow-xs" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Boxes className="size-3.5" />
+              <span>Klasifikasi ABC & Stok Min-Max</span>
+            </Button>
 
-        <Button
-          variant={activeTab === "reorder" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setActiveTab("reorder")}
-          className={cn(
-            "h-8 px-3.5 gap-2 text-xs font-semibold rounded-lg transition-all",
-            activeTab === "reorder" ? "shadow-xs" : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <ShoppingCart className="size-3.5" />
-          <span>Rekomendasi Restock</span>
-        </Button>
+            <Button
+              variant={activeTab === "reorder" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveTab("reorder")}
+              className={cn(
+                "h-8 px-3.5 gap-2 text-xs font-semibold rounded-lg transition-all",
+                activeTab === "reorder" ? "shadow-xs" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <ShoppingCart className="size-3.5" />
+              <span>Rekomendasi Restock</span>
+            </Button>
+          </>
+        )}
 
         <Button
           variant={activeTab === "movement-logs" ? "default" : "outline"}
@@ -309,15 +316,17 @@ export default function InventoryPage() {
             </h1>
 
             <div className="flex items-center gap-2 shrink-0">
-              <Button 
-                variant="default"
-                size="sm" 
-                onClick={() => setIsAddModalOpen(true)}
-                className="h-8 px-3 text-xs font-semibold gap-1.5 shadow-2xs"
-              >
-                <Plus className="size-3.5" />
-                <span>Tambah Produk</span>
-              </Button>
+              {isOwner && (
+                <Button 
+                  variant="default"
+                  size="sm" 
+                  onClick={() => setIsAddModalOpen(true)}
+                  className="h-8 px-3 text-xs font-semibold gap-1.5 shadow-2xs"
+                >
+                  <Plus className="size-3.5" />
+                  <span>Tambah Produk</span>
+                </Button>
+              )}
 
               <Button
                 variant="outline"
@@ -558,27 +567,27 @@ export default function InventoryPage() {
               <TableHeader>
                 <TableRow className="bg-muted/40 text-xs">
                   <TableHead className="w-[50px] text-center p-2">Foto</TableHead>
-                  <TableHead className="w-[27%] text-left">Nama Produk</TableHead>
-                  <TableHead className="w-[14%] text-left">Kategori</TableHead>
-                  <TableHead className="w-[5%] text-center">ABC</TableHead>
-                  <TableHead className="w-[11%] text-right">Stok</TableHead>
-                  <TableHead className="w-[12%] text-right">Min/Max</TableHead>
-                  <TableHead className="w-[12%] text-right">Harga Pokok</TableHead>
-                  <TableHead className="w-[12%] text-right">Harga Jual</TableHead>
+                  <TableHead className={isOwner ? "w-[27%] text-left" : "w-[34%] text-left"}>Nama Produk</TableHead>
+                  <TableHead className={isOwner ? "w-[14%] text-left" : "w-[18%] text-left"}>Kategori</TableHead>
+                  {isOwner && <TableHead className="w-[5%] text-center">ABC</TableHead>}
+                  <TableHead className={isOwner ? "w-[11%] text-right" : "w-[14%] text-right"}>Stok</TableHead>
+                  <TableHead className={isOwner ? "w-[12%] text-right" : "w-[15%] text-right"}>Min/Max</TableHead>
+                  {isOwner && <TableHead className="w-[12%] text-right">Harga Pokok</TableHead>}
+                  <TableHead className={isOwner ? "w-[12%] text-right" : "w-[16%] text-right"}>Harga Jual</TableHead>
                   <TableHead className="w-[36px] text-center p-2"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody className="text-xs">
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-28 text-center text-muted-foreground">
+                    <TableCell colSpan={isOwner ? 9 : 7} className="h-28 text-center text-muted-foreground">
                       <Loader2 className="mr-2 h-4 w-4 animate-spin inline-block text-primary" />
                       Memuat katalog produk...
                     </TableCell>
                   </TableRow>
                 ) : products.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-28 text-center text-muted-foreground">
+                    <TableCell colSpan={isOwner ? 9 : 7} className="h-28 text-center text-muted-foreground">
                       Tidak ada produk ditemukan.
                     </TableCell>
                   </TableRow>
@@ -632,37 +641,52 @@ export default function InventoryPage() {
                           )}
                         </TableCell>
 
-                        {/* ABC */}
-                        <TableCell className="text-center py-2">
-                          {product.abcCategory ? (
-                            <span className={cn(
-                              "px-1.5 py-0.2 rounded font-bold text-[10px] font-mono border inline-block",
-                              product.abcCategory === "A" && "text-[#F1416C] bg-[#F1416C]/10 border-[#F1416C]/30",
-                              product.abcCategory === "B" && "text-[#F79417] bg-[#F79417]/10 border-[#F79417]/30",
-                              product.abcCategory === "C" && "text-[#50CD89] bg-[#50CD89]/10 border-[#50CD89]/30",
-                            )}>
-                              {product.abcCategory}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground text-[10px] font-mono">-</span>
-                          )}
-                        </TableCell>
+                        {/* ABC (Khusus Pemilik Usaha) */}
+                        {isOwner && (
+                          <TableCell className="text-center py-2">
+                            {product.abcCategory ? (
+                              <span className={cn(
+                                "px-1.5 py-0.2 rounded font-bold text-[10px] font-mono border inline-block",
+                                product.abcCategory === "A" && "text-[#F1416C] bg-[#F1416C]/10 border-[#F1416C]/30",
+                                product.abcCategory === "B" && "text-[#F79417] bg-[#F79417]/10 border-[#F79417]/30",
+                                product.abcCategory === "C" && "text-[#50CD89] bg-[#50CD89]/10 border-[#50CD89]/30",
+                              )}>
+                                {product.abcCategory}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground text-[10px] font-mono">-</span>
+                            )}
+                          </TableCell>
+                        )}
 
                         {/* Stok */}
-                        <TableCell className="text-right py-2 overflow-hidden">
-                          {isOutOfStock ? (
-                            <span className="px-2 py-0.5 rounded-md font-semibold text-[11px] font-mono bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/25 inline-block truncate max-w-full">
-                              {formatMultiUnitStock(product.stock, product.prices)}
-                            </span>
-                          ) : isLowStock ? (
-                            <span className="px-2 py-0.5 rounded-md font-semibold text-[11px] font-mono bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25 inline-block truncate max-w-full">
-                              {formatMultiUnitStock(product.stock, product.prices)}
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-md font-medium text-[11px] font-mono bg-muted/60 text-foreground border border-border/60 inline-block truncate max-w-full">
-                              {formatMultiUnitStock(product.stock, product.prices)}
-                            </span>
-                          )}
+                        <TableCell 
+                          className="text-right py-2 overflow-hidden"
+                          title={`Satuan Dasar: ${formatBaseUnitStock(product.stock, product.prices)}`}
+                        >
+                          <div className="flex flex-col items-end justify-center">
+                            {isOutOfStock ? (
+                              <span className="px-2 py-0.5 rounded-md font-semibold text-[11px] font-mono bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/25 inline-block truncate max-w-full">
+                                {formatMultiUnitStock(product.stock, product.prices)}
+                              </span>
+                            ) : isLowStock ? (
+                              <span className="px-2 py-0.5 rounded-md font-semibold text-[11px] font-mono bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25 inline-block truncate max-w-full">
+                                {formatMultiUnitStock(product.stock, product.prices)}
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-md font-medium text-[11px] font-mono bg-muted/60 text-foreground border border-border/60 inline-block truncate max-w-full">
+                                {formatMultiUnitStock(product.stock, product.prices)}
+                              </span>
+                            )}
+                            {hasLargerUnit(product.prices) && (
+                              <span 
+                                className="text-[10px] text-muted-foreground font-mono mt-0.5 truncate max-w-full"
+                                title={`Satuan Dasar: ${formatBaseUnitStock(product.stock, product.prices)}`}
+                              >
+                                {formatBaseUnitStock(product.stock, product.prices)}
+                              </span>
+                            )}
+                          </div>
                         </TableCell>
 
                         {/* Min / Max (Dinamis Sesuai Multi Satuan) */}
@@ -673,13 +697,15 @@ export default function InventoryPage() {
                           {formatMultiUnitMinMax(product.minStock, product.maxStock, product.prices)}
                         </TableCell>
 
-                        {/* Harga Pokok (Disesuaikan dengan Satuan Terbesar) */}
-                        <TableCell 
-                          className="text-right font-mono text-xs text-muted-foreground py-2 truncate"
-                          title={`Modal Satuan Dasar: ${formatCurrency(Number(product.averageCost) || 0)}`}
-                        >
-                          {formatCurrency(getMainUnitCost(Number(product.averageCost) || 0, product.prices))}
-                        </TableCell>
+                        {/* Harga Pokok (Disesuaikan dengan Satuan Terbesar - Khusus Pemilik Usaha) */}
+                        {isOwner && (
+                          <TableCell 
+                            className="text-right font-mono text-xs text-muted-foreground py-2 truncate"
+                            title={`Modal Satuan Dasar: ${formatCurrency(Number(product.averageCost) || 0)}`}
+                          >
+                            {formatCurrency(getMainUnitCost(Number(product.averageCost) || 0, product.prices))}
+                          </TableCell>
+                        )}
 
                         {/* Harga Jual */}
                         <TableCell className="text-right font-mono font-semibold text-xs text-foreground py-2 truncate">
@@ -691,13 +717,15 @@ export default function InventoryPage() {
                           <DropdownMenu>
                             <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="h-6 w-6"><MoreHorizontal className="h-3.5 w-3.5" /></Button>} />
                             <DropdownMenuContent align="end" className="min-w-[175px] w-auto whitespace-nowrap">
-                              <DropdownMenuItem onClick={() => {
-                                setEditProduct(product);
-                                setIsAddModalOpen(true);
-                              }}>
-                                <Edit className="mr-2 h-3.5 w-3.5 text-blue-500" />
-                                Edit
-                              </DropdownMenuItem>
+                              {isOwner && (
+                                <DropdownMenuItem onClick={() => {
+                                  setEditProduct(product);
+                                  setIsAddModalOpen(true);
+                                }}>
+                                  <Edit className="mr-2 h-3.5 w-3.5 text-blue-500" />
+                                  Edit
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuItem onClick={() => setAddStockProduct(product)}>
                                 <PlusCircle className="mr-2 h-3.5 w-3.5 text-emerald-500" />
                                 Tambah Stok
@@ -706,11 +734,15 @@ export default function InventoryPage() {
                                 <History className="mr-2 h-3.5 w-3.5" />
                                 Batch & Log FIFO
                               </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem variant="destructive" onClick={() => setDeleteProduct(product)}>
-                                <Trash className="mr-2 h-3.5 w-3.5 text-rose-500" />
-                                Hapus
-                              </DropdownMenuItem>
+                              {isOwner && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem variant="destructive" onClick={() => setDeleteProduct(product)}>
+                                    <Trash className="mr-2 h-3.5 w-3.5 text-rose-500" />
+                                    Hapus
+                                  </DropdownMenuItem>
+                                </>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
