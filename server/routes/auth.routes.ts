@@ -12,7 +12,7 @@ const router = express.Router();
 router.post(
   "/register", 
   authMiddleware,
-  roleMiddleware(["ADMIN", "MANAGER"]),
+  roleMiddleware(["OWNER", "ADMIN", "MANAGER"]),
   validateResource(registerSchema), 
   asyncHandler(AuthController.register)
 );
@@ -28,21 +28,21 @@ router.get("/me", authMiddleware, asyncHandler(AuthController.me));
 router.get(
   "/users", 
   authMiddleware, 
-  roleMiddleware(["ADMIN", "MANAGER"]), 
+  roleMiddleware(["OWNER", "ADMIN", "MANAGER"]), 
   asyncHandler(AuthController.listUsers)
 );
 
 router.put(
   "/users/:id", 
   authMiddleware, 
-  roleMiddleware(["ADMIN", "MANAGER"]), 
+  roleMiddleware(["OWNER", "ADMIN", "MANAGER"]), 
   asyncHandler(AuthController.update)
 );
 
 router.delete(
   "/users/:id", 
   authMiddleware, 
-  roleMiddleware(["ADMIN"]), 
+  roleMiddleware(["OWNER", "ADMIN", "MANAGER"]), 
   asyncHandler(AuthController.delete)
 );
 

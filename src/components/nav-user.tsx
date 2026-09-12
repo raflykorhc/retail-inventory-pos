@@ -20,9 +20,9 @@ import {
 } from "@/components/ui/sidebar"
 import { IconDotsVertical, IconLogout, IconSun, IconMoon } from "@tabler/icons-react"
 import { Switch } from "@/components/ui/switch"
-import { useTheme } from "../context/ThemeContext"
 import { useNavigate } from "react-router-dom"
-import { useAuthStore } from "../store/useAuthStore"
+import { useTheme } from "../context/ThemeContext"
+import { useAuthStore, getRoleDisplayName } from "../store/useAuthStore"
 
 export function NavUser() {
   const { isMobile } = useSidebar()
@@ -54,7 +54,7 @@ export function NavUser() {
             </Avatar>
             <div className="grid flex-1 text-left text-sm leading-tight">
               <span className="truncate font-medium">{user.fullName}</span>
-              <span className="truncate text-xs text-muted-foreground">{user.role}</span>
+              <span className="truncate text-xs text-muted-foreground">{getRoleDisplayName(user.role)}</span>
             </div>
             <IconDotsVertical className="ml-auto size-4" />
           </DropdownMenuTrigger>
@@ -73,7 +73,7 @@ export function NavUser() {
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-medium">{user.fullName}</span>
-                    <span className="truncate text-xs text-muted-foreground">{user.role}</span>
+                    <span className="truncate text-xs text-muted-foreground">{getRoleDisplayName(user.role)}</span>
                   </div>
                 </div>
               </DropdownMenuLabel>

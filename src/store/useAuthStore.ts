@@ -4,9 +4,24 @@ import { QueryClient } from "@tanstack/react-query";
 
 const queryClient = new QueryClient();
 
-export type Role = "ADMIN" | "MANAGER" | "CASHIER";
+export type Role = "OWNER" | "CASHIER" | "ADMIN" | "MANAGER";
 
-interface User {
+export const isOwnerRole = (role?: string | null): boolean => {
+  if (!role) return false;
+  return role === "OWNER" || role === "ADMIN" || role === "MANAGER";
+};
+
+export const isCashierRole = (role?: string | null): boolean => {
+  return role === "CASHIER";
+};
+
+export const getRoleDisplayName = (role?: string | null): string => {
+  if (isOwnerRole(role)) return "Pemilik Usaha";
+  if (isCashierRole(role)) return "Kasir";
+  return "Pengguna";
+};
+
+export interface User {
   id: string;
   username: string;
   fullName: string;

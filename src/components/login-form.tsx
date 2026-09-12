@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/input"
 import { toast } from "@/components/ui/toast"
 
 import { authService } from "../services/authService"
-import { useAuthStore } from "../store/useAuthStore"
+import { useAuthStore, isOwnerRole } from "../store/useAuthStore"
 import { useSettingsStore } from "../store/useSettingsStore"
 
 const loginSchema = z.object({
@@ -51,16 +51,18 @@ export function LoginForm({
     fetchSettings()
   }, [fetchSettings])
 
-  const fromPath = location.state?.from?.pathname || "/"
+  const fromPath = location.state?.from?.pathname || ""
   const fromSearch = location.state?.from?.search || location.search || ""
-  const from = fromPath + fromSearch
+  const from = fromPath ? fromPath + fromSearch : ""
 
   // Redirect if already authenticated
   React.useEffect(() => {
     if (isAuthenticated && useAuthStore.getState().user) {
-      navigate("/inventory" + fromSearch, { replace: true })
+      const currentUser = useAuthStore.getState().user;
+      const defaultPath = isOwnerRole(currentUser?.role) ? "/dashboard" : "/";
+      navigate(from && fromPath !== "/login" ? from : defaultPath, { replace: true })
     }
-  }, [isAuthenticated, navigate, fromSearch])
+  }, [isAuthenticated, navigate, from, fromPath])
 
   const {
     register,
@@ -78,10 +80,11 @@ export function LoginForm({
       setAuth(response.token, response.user)
       
       toast.success("Berhasil Masuk", {
-        description: `Selamat datang kembali, ${response.user.username}!`,
+        description: `Selamat datang kembali, ${response.user.fullName || response.user.username}!`,
       })
 
-      navigate("/inventory", { replace: true })
+      const defaultPath = isOwnerRole(response.user.role) ? "/dashboard" : "/";
+      navigate(from && fromPath !== "/login" ? from : defaultPath, { replace: true })
     } catch (err: any) {
       const message = err.response?.data?.error || "Gagal masuk. Periksa kembali username dan password Anda."
       setError(message)

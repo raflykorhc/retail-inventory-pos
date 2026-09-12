@@ -8,8 +8,15 @@ export const roleMiddleware = (allowedRoles: string[]) => {
       return next(new ApiError(401, "Unauthorized"));
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
-      return next(new ApiError(403, "Akses ditolak. Anda tidak memiliki izin."));
+    const userRole = req.user.role;
+    // Normalisasi: OWNER, ADMIN, dan MANAGER mewakili Pemilik Usaha
+    const isOwnerLevel = userRole === "OWNER" || userRole === "ADMIN" || userRole === "MANAGER";
+    const allowsOwner = allowedRoles.includes("OWNER") || allowedRoles.includes("ADMIN") || allowedRoles.includes("MANAGER");
+
+    const hasPermission = allowedRoles.includes(userRole) || (isOwnerLevel && allowsOwner);
+
+    if (!hasPermission) {
+      return next(new ApiError(403, "Akses ditolak. Fitur ini hanya dapat diakses oleh Pemilik Usaha."));
     }
 
     next();
