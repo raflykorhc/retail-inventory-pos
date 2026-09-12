@@ -14,18 +14,18 @@ router.get("/:id/image", asyncHandler(ProductImageController.getImage));
 router.use(authMiddleware);
 
 router.get("/", asyncHandler(ProductController.getAll));
-router.post("/", roleMiddleware(["ADMIN", "MANAGER"]), asyncHandler(ProductController.create));
-router.put("/:id", roleMiddleware(["ADMIN", "MANAGER"]), asyncHandler(ProductController.update));
-router.post("/:id/preflight-scale-shift", roleMiddleware(["ADMIN", "MANAGER"]), asyncHandler(ProductController.preflightScaleShift));
-router.post("/bulk-delete", roleMiddleware(["ADMIN"]), asyncHandler(ProductController.bulkDelete));
-router.delete("/:id", roleMiddleware(["ADMIN"]), asyncHandler(ProductController.delete));
+router.post("/", roleMiddleware(["OWNER", "ADMIN", "MANAGER"]), asyncHandler(ProductController.create));
+router.put("/:id", roleMiddleware(["OWNER", "ADMIN", "MANAGER"]), asyncHandler(ProductController.update));
+router.post("/:id/preflight-scale-shift", roleMiddleware(["OWNER", "ADMIN", "MANAGER"]), asyncHandler(ProductController.preflightScaleShift));
+router.post("/bulk-delete", roleMiddleware(["OWNER", "ADMIN", "MANAGER"]), asyncHandler(ProductController.bulkDelete));
+router.delete("/:id", roleMiddleware(["OWNER", "ADMIN", "MANAGER"]), asyncHandler(ProductController.delete));
 
-router.post("/:id/stock", roleMiddleware(["ADMIN", "MANAGER", "STAFF"]), asyncHandler(ProductController.addStock));
+router.post("/:id/stock", roleMiddleware(["OWNER", "ADMIN", "MANAGER", "CASHIER"]), asyncHandler(ProductController.addStock));
 router.get("/:id/logs", asyncHandler(ProductController.getLogs));
 router.get("/:id/batches", asyncHandler(ProductController.getBatches));
 router.get("/batches/:id", asyncHandler(ProductController.getBatchById));
-router.put("/batches/:id", roleMiddleware(["ADMIN", "MANAGER"]), asyncHandler(ProductController.updateBatch));
-router.post("/cleanup-batches", roleMiddleware(["ADMIN"]), asyncHandler(ProductController.cleanupBatches));
+router.put("/batches/:id", roleMiddleware(["OWNER", "ADMIN", "MANAGER"]), asyncHandler(ProductController.updateBatch));
+router.post("/cleanup-batches", roleMiddleware(["OWNER", "ADMIN", "MANAGER"]), asyncHandler(ProductController.cleanupBatches));
 
 export default router;
 
