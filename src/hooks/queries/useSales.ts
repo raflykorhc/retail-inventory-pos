@@ -13,13 +13,14 @@ export const useSales = (filters: any = {}) => {
   });
 };
 
-export const useSalesSummary = (filters: any = {}) => {
-  return useQuery({
+export const useSalesSummary = (filters: any = {}, options: any = {}) => {
+  return useQuery<any>({
     queryKey: ['sales-summary', filters],
     queryFn: async () => {
       const res = await axiosClient.get('/reports/sales/summary', { params: filters });
       return res.data;
     },
+    ...options,
   });
 };
 

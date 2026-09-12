@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Trash, Plus, Minus, ShoppingBag, CreditCard, RotateCcw, ArrowLeft, Banknote, Calendar, Smartphone, Wallet, MoreHorizontal, Tag, Edit, X, QrCode, Pause, Clock, Printer, CheckCircle2 } from "lucide-react";
+import { Trash, Plus, Minus, ShoppingBag, CreditCard, RotateCcw, ArrowLeft, Banknote, Calendar, Smartphone, Wallet, MoreHorizontal, Tag, Edit, X, QrCode, Pause, Clock, Printer, CheckCircle2, Gift, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,6 +38,10 @@ interface CartItem {
   stock?: number;
   prices?: any[];
   selectedPriceId?: string | number;
+  isBonus?: boolean;
+  originalPrice?: number;
+  costPrice?: number;
+  averageCost?: number;
 }
 
 interface PosCartProps {
@@ -54,6 +58,8 @@ interface PosCartProps {
   onOpenHeldCarts?: () => void;
   isPaymentPhaseState?: boolean;
   setIsPaymentPhaseState?: (val: boolean) => void;
+  onToggleBonus?: (id: any) => void;
+  onSplitBonus?: (id: any) => void;
 }
 
 export function PosCart({ 
@@ -69,7 +75,9 @@ export function PosCart({
   onHoldCart,
   onOpenHeldCarts,
   isPaymentPhaseState,
-  setIsPaymentPhaseState
+  setIsPaymentPhaseState,
+  onToggleBonus,
+  onSplitBonus
 }: PosCartProps) {
   const [internalPaymentPhase, setInternalPaymentPhase] = useState(false);
   
@@ -169,9 +177,11 @@ export function PosCart({
   };
 
   const totalItemsCount = cart.reduce((acc, item) => acc + item.quantity, 0);
+  const totalBonusItemsCount = cart.reduce((acc, item) => acc + (item.isBonus ? item.quantity : 0), 0);
 
   const itemsSubtotal = useMemo(() => {
     return cart.reduce((acc, item) => {
+      if (item.isBonus) return acc;
       const keyId = item.cartItemId || (item.batchId ? `${item.id}-${item.batchId}` : String(item.id));
       const customPriceObj = customPrices[keyId];
       const effectivePrice = (customPriceObj?.value !== undefined && customPriceObj?.value >= 0) ? customPriceObj.value : item.price;
@@ -243,10 +253,13 @@ export function PosCart({
         items: cart.map(item => {
           const keyId = item.cartItemId || (item.batchId ? `${item.id}-${item.batchId}` : String(item.id));
           const customPriceObj = customPrices[keyId];
-          const effectivePrice = (customPriceObj?.value !== undefined && customPriceObj?.value >= 0) ? customPriceObj.value : item.price;
+          const effectivePrice = item.isBonus 
+            ? 0 
+            : ((customPriceObj?.value !== undefined && customPriceObj?.value >= 0) ? customPriceObj.value : item.price);
           return {
             ...item,
-            price: effectivePrice
+            price: effectivePrice,
+            isBonus: Boolean(item.isBonus)
           };
         })
       };
@@ -267,15 +280,17 @@ export function PosCart({
 
     const itemsHtml = (saleData.items || []).map((item: any) => `
       <div style="margin-bottom: 4px;">
-        <div style="font-weight: bold; font-size: 11px;">${item.name}</div>
+        <div style="font-weight: bold; font-size: 11px;">
+          ${item.name} ${item.isBonus ? '<span style="font-size: 9px; color: #16a34a; font-weight: bold; margin-left: 4px;">[BONUS]</span>' : ''}
+        </div>
         <div style="display: flex; justify-content: space-between; font-size: 10px; color: #333;">
-          <span>${item.quantity} ${item.unit || 'Pcs'} x Rp ${Number(item.price || 0).toLocaleString('id-ID')}</span>
-          <span style="font-weight: bold; color: #000;">Rp ${(Number(item.price || 0) * Number(item.quantity || 1)).toLocaleString('id-ID')}</span>
+          <span>${item.quantity} ${item.unit || 'Pcs'} x ${item.isBonus ? 'Rp 0 (Gratis)' : `Rp ${Number(item.price || 0).toLocaleString('id-ID')}`}</span>
+          <span style="font-weight: bold; color: #000;">${item.isBonus ? 'Rp 0' : `Rp ${(Number(item.price || 0) * Number(item.quantity || 1)).toLocaleString('id-ID')}`}</span>
         </div>
       </div>
     `).join('');
 
-    const subtotal = (saleData.items || []).reduce((acc: number, i: any) => acc + ((i.price || 0) * (i.quantity || 1)), 0);
+    const subtotal = (saleData.items || []).reduce((acc: number, i: any) => acc + (i.isBonus ? 0 : ((i.price || 0) * (i.quantity || 1))), 0);
 
     const printFrame = document.createElement('iframe');
     printFrame.style.position = 'fixed';
@@ -512,6 +527,13 @@ export function PosCart({
                   const finalSubtotal = Math.max(0, rawSubtotal - discountAmount);
                   const hasExpandedRows = Boolean(customPriceObj?.showInput || disc?.showInput);
 
+                  // Indikator Visual Proteksi: Jika harga jual di bawah modal (Iterasi 3)
+                  const selectedPriceObj = item.prices?.find((p: any) => String(p.id) === String(item.selectedPriceId) || String(p.unitId) === String(item.selectedPriceId));
+                  const factor = selectedPriceObj?.conversionFactor || item.mainFactor || 1;
+                  const unitCostPrice = (Number((item as any).costPrice || (item as any).averageCost) || 0) * factor;
+                  const finalUnitNetPrice = item.quantity > 0 ? (finalSubtotal / item.quantity) : effectivePrice;
+                  const isBelowCost = !item.isBonus && unitCostPrice > 0 && finalUnitNetPrice < unitCostPrice;
+
                   const unitSelectElement = item.prices && item.prices.length > 0 && onUpdateUnit ? (
                     <div className="flex items-center gap-1.5">
                       <span className={cn("text-[10px] font-medium text-muted-foreground shrink-0", hasExpandedRows ? "w-[68px]" : "w-auto")}>Satuan:</span>
@@ -551,7 +573,12 @@ export function PosCart({
                   return (
                     <div
                       key={keyId}
-                      className="p-2.5 bg-card rounded-xl border border-border/50 hover:border-border transition-all shadow-xs space-y-2"
+                      className={cn(
+                        "p-2.5 rounded-xl border transition-all shadow-xs space-y-2",
+                        item.isBonus 
+                          ? "bg-emerald-500/[0.04] dark:bg-emerald-500/[0.08] border-emerald-500/30 hover:border-emerald-500/50" 
+                          : "bg-card border-border/50 hover:border-border"
+                      )}
                     >
                       {/* Baris 1: Gambar/Emoji + Nama Produk + Dropdown Menu Titik 3 */}
                       <div className="flex items-center justify-between gap-2">
@@ -564,9 +591,16 @@ export function PosCart({
                             )}
                           </span>
                           <div className="flex flex-col min-w-0 flex-1">
-                            <h4 className="font-semibold text-xs text-foreground truncate leading-tight">
-                              {item.name}
-                            </h4>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <h4 className="font-semibold text-xs text-foreground truncate leading-tight">
+                                {item.name}
+                              </h4>
+                              {item.isBonus && (
+                                <Badge variant="outline" className="text-[9px] font-bold px-1.5 py-0 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 leading-tight gap-0.5">
+                                  <Gift className="w-2.5 h-2.5" /> BONUS
+                                </Badge>
+                              )}
+                            </div>
                             {item.batchId && (
                               <Badge variant="outline" className="w-fit text-[9px] font-semibold px-1.5 py-0 rounded-md bg-muted text-muted-foreground border-border/50 leading-tight mt-0.5">
                                 Batch: {item.batchCode || 'Spesifik'}
@@ -587,15 +621,54 @@ export function PosCart({
                               </Button>
                             }
                           />
-                          <DropdownMenuContent align="end" className="w-[150px]">
-                            <DropdownMenuItem onClick={() => togglePriceInput(keyId, item.price)}>
-                              <Edit className="mr-2 h-3.5 w-3.5" />
-                              {customPriceObj?.showInput ? "Tutup Ubah Harga" : "Ubah Harga"}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => toggleDiscountInput(keyId)}>
-                              <Tag className="mr-2 h-3.5 w-3.5" />
-                              {disc?.showInput ? "Tutup Diskon" : "Tambah Diskon"}
-                            </DropdownMenuItem>
+                          <DropdownMenuContent align="end" className="w-[175px]">
+                            {onToggleBonus && (
+                              <DropdownMenuItem 
+                                onClick={() => onToggleBonus(keyId)}
+                                className={cn(
+                                  item.isBonus 
+                                    ? "text-amber-600 focus:text-amber-700 font-medium" 
+                                    : "text-emerald-600 focus:text-emerald-700 font-medium"
+                                )}
+                              >
+                                {item.isBonus ? (
+                                  <>
+                                    <RotateCcw className="mr-2 h-3.5 w-3.5 text-amber-600" />
+                                    Batalkan Bonus
+                                  </>
+                                ) : (
+                                  <>
+                                    <Gift className="mr-2 h-3.5 w-3.5 text-emerald-600" />
+                                    Jadikan Barang Bonus
+                                  </>
+                                )}
+                              </DropdownMenuItem>
+                            )}
+
+                            {!item.isBonus && onSplitBonus && item.quantity > 1 && (
+                              <DropdownMenuItem 
+                                onClick={() => onSplitBonus(keyId)}
+                                className="text-emerald-600 focus:text-emerald-700 font-medium"
+                              >
+                                <Sparkles className="mr-2 h-3.5 w-3.5 text-emerald-600" />
+                                Pisahkan 1 sbg Bonus
+                              </DropdownMenuItem>
+                            )}
+
+                            {!item.isBonus && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => togglePriceInput(keyId, item.price)}>
+                                  <Edit className="mr-2 h-3.5 w-3.5" />
+                                  {customPriceObj?.showInput ? "Tutup Ubah Harga" : "Ubah Harga"}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => toggleDiscountInput(keyId)}>
+                                  <Tag className="mr-2 h-3.5 w-3.5" />
+                                  {disc?.showInput ? "Tutup Diskon" : "Tambah Diskon"}
+                                </DropdownMenuItem>
+                              </>
+                            )}
+
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               variant="destructive"
@@ -613,7 +686,10 @@ export function PosCart({
                         <div className="flex items-center gap-1.5 pt-0.5 animate-in fade-in duration-200">
                           <span className="text-[10px] font-medium text-muted-foreground shrink-0 w-[68px]">Harga Baru:</span>
                           <div className="relative flex items-center w-[152px]">
-                            <span className="absolute left-2 text-[10px] font-bold text-muted-foreground pointer-events-none select-none">
+                            <span className={cn(
+                              "absolute left-2 text-[10px] font-bold pointer-events-none select-none",
+                              isBelowCost ? "text-destructive" : "text-muted-foreground"
+                            )}>
                               Rp
                             </span>
                             <Input
@@ -622,9 +698,17 @@ export function PosCart({
                               placeholder={String(item.price)}
                               value={customPriceObj.value ?? item.price}
                               onChange={(e) => updateCustomPriceValue(keyId, parseFloat(e.target.value) || 0)}
-                              className="h-6 w-full pl-7 pr-2 text-right text-xs font-bold border-border/40 bg-background rounded-[4px]"
+                              className={cn(
+                                "h-6 w-full pl-7 pr-2 text-right text-xs font-bold border-border/40 bg-background rounded-[4px]",
+                                isBelowCost && "border-destructive text-destructive focus-visible:ring-destructive"
+                              )}
                             />
                           </div>
+                          {isBelowCost && (
+                            <span className="text-[9px] font-bold text-destructive bg-destructive/10 border border-destructive/20 px-1 py-0.5 rounded leading-none shrink-0" title="Peringatan: Harga jual berada di bawah harga modal">
+                              Bawah Modal
+                            </span>
+                          )}
                           <Button
                             type="button"
                             variant="ghost"
@@ -709,22 +793,54 @@ export function PosCart({
                         </div>
 
                         <div className="text-right">
-                          <span className="text-[9px] text-muted-foreground block leading-none mb-0.5">
-                            @ Rp {effectivePrice.toLocaleString('id-ID')} {item.unit ? `/ ${item.unit}` : ''}
-                          </span>
-                          {discountAmount > 0 ? (
+                          {item.isBonus ? (
                             <div className="flex flex-col items-end">
-                              <span className="text-[10px] text-muted-foreground line-through tabular-nums leading-none">
-                                Rp {rawSubtotal.toLocaleString('id-ID')}
+                              <span className="text-[9px] text-muted-foreground line-through tabular-nums leading-none mb-0.5">
+                                @ Rp {((customPriceObj?.value !== undefined && customPriceObj?.value >= 0) ? customPriceObj.value : (item.originalPrice ?? item.price)).toLocaleString('id-ID')}
                               </span>
-                              <span className="text-xs font-bold text-foreground tabular-nums">
-                                Rp {finalSubtotal.toLocaleString('id-ID')}
-                              </span>
+                              <div className="flex items-center gap-1">
+                                <span className="text-[9px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 px-1 py-0.5 rounded border border-emerald-500/20">
+                                  GRATIS
+                                </span>
+                                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                                  Rp 0
+                                </span>
+                              </div>
                             </div>
                           ) : (
-                            <span className="text-xs font-bold text-foreground tabular-nums">
-                              Rp {rawSubtotal.toLocaleString('id-ID')}
-                            </span>
+                            <>
+                              <span className={cn(
+                                "text-[9px] block leading-none mb-0.5",
+                                isBelowCost ? "text-destructive font-semibold" : "text-muted-foreground"
+                              )}>
+                                @ Rp {effectivePrice.toLocaleString('id-ID')} {item.unit ? `/ ${item.unit}` : ''}
+                                {isBelowCost && (
+                                  <span className="ml-1 text-[8px] bg-destructive/10 text-destructive border border-destructive/20 px-1 py-0.2 rounded font-bold">
+                                    Bawah Modal
+                                  </span>
+                                )}
+                              </span>
+                              {discountAmount > 0 ? (
+                                <div className="flex flex-col items-end">
+                                  <span className="text-[10px] text-muted-foreground line-through tabular-nums leading-none">
+                                    Rp {rawSubtotal.toLocaleString('id-ID')}
+                                  </span>
+                                  <span className={cn(
+                                    "text-xs font-bold tabular-nums",
+                                    isBelowCost ? "text-destructive" : "text-foreground"
+                                  )}>
+                                    Rp {finalSubtotal.toLocaleString('id-ID')}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className={cn(
+                                  "text-xs font-bold tabular-nums",
+                                  isBelowCost ? "text-destructive" : "text-foreground"
+                                )}>
+                                  Rp {rawSubtotal.toLocaleString('id-ID')}
+                                </span>
+                              )}
+                            </>
                           )}
                         </div>
                       </div>
@@ -933,6 +1049,15 @@ export function PosCart({
       <div className="p-3 border-t border-border/50 bg-background space-y-2 shrink-0 z-10">
         {!isPaymentPhase ? (
           <div className="space-y-1.5">
+            {totalBonusItemsCount > 0 && (
+              <div className="flex justify-between items-center text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20">
+                <span className="flex items-center gap-1.5">
+                  <Gift className="w-3.5 h-3.5" /> Total Barang Bonus ({totalBonusItemsCount} item)
+                </span>
+                <span className="font-bold">Rp 0 (Gratis)</span>
+              </div>
+            )}
+
             {additionalDiscountAmount > 0 && (
               <div className="flex justify-between items-center text-xs text-muted-foreground">
                 <span>Subtotal</span>
@@ -1082,15 +1207,20 @@ export function PosCart({
                 <div className="space-y-1.5 text-[10px]">
                   {completedSaleData.items?.map((item: any, idx: number) => (
                     <div key={idx} className="space-y-0.5">
-                      <div className="font-semibold text-black truncate">
-                        {item.name}
+                      <div className="font-semibold text-black truncate flex items-center justify-between gap-1">
+                        <span className="truncate">{item.name}</span>
+                        {item.isBonus && (
+                          <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1 py-0.2 rounded border border-emerald-300 shrink-0">
+                            BONUS
+                          </span>
+                        )}
                       </div>
                       <div className="flex justify-between text-gray-600">
                         <span>
-                          {item.quantity} {item.unit || "Pcs"} x Rp {Number(item.price || 0).toLocaleString("id-ID")}
+                          {item.quantity} {item.unit || "Pcs"} x {item.isBonus ? "Rp 0" : `Rp ${Number(item.price || 0).toLocaleString("id-ID")}`}
                         </span>
                         <span className="font-bold text-black">
-                          Rp {(Number(item.price || 0) * Number(item.quantity || 1)).toLocaleString("id-ID")}
+                          {item.isBonus ? "Rp 0 (Gratis)" : `Rp ${(Number(item.price || 0) * Number(item.quantity || 1)).toLocaleString("id-ID")}`}
                         </span>
                       </div>
                     </div>
@@ -1104,7 +1234,7 @@ export function PosCart({
                   <div className="flex justify-between text-gray-700">
                     <span>Subtotal:</span>
                     <span>
-                      Rp {(completedSaleData.items || []).reduce((acc: number, item: any) => acc + ((item.price || 0) * (item.quantity || 1)), 0).toLocaleString("id-ID")}
+                      Rp {(completedSaleData.items || []).reduce((acc: number, item: any) => acc + (item.isBonus ? 0 : ((item.price || 0) * (item.quantity || 1))), 0).toLocaleString("id-ID")}
                     </span>
                   </div>
 
