@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { 
   Search, 
   FileSpreadsheet, 
@@ -49,13 +50,23 @@ interface ReorderSuggestionsTabProps {
 }
 
 export function ReorderSuggestionsTab({ onAddStock }: ReorderSuggestionsTabProps) {
-  const [search, setSearch] = useState("");
+  const [searchParams] = useSearchParams();
+  const [search, setSearch] = useState(() => searchParams.get("search") || "");
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [selectedSupplier, setSelectedSupplier] = useState("ALL");
   const [selectedAbc, setSelectedAbc] = useState("ALL");
   const [sortBy, setSortBy] = useState("popular");
   const [page, setPage] = useState(1);
   const itemsPerPage = 10;
+
+  // Sinkronisasi kata kunci pencarian dari URL (misal dari notifikasi lonceng)
+  useEffect(() => {
+    const urlSearch = searchParams.get("search");
+    if (urlSearch !== null && urlSearch !== undefined) {
+      setSearch(urlSearch);
+      setPage(1);
+    }
+  }, [searchParams]);
 
   const { data: categories = [] } = useCategories();
   const { data: suppliers = [] } = useSuppliers();

@@ -89,15 +89,20 @@ export default function InventoryPage() {
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(() => searchParams.get("tab") || "catalog");
 
+  // Catalog filters & pagination
+  const [search, setSearch] = useState(() => searchParams.get("search") || "");
+
   useEffect(() => {
     const tabParam = searchParams.get("tab");
     if (tabParam) {
       setActiveTab(tabParam);
     }
+    const urlSearch = searchParams.get("search");
+    if (urlSearch !== null && urlSearch !== undefined) {
+      setSearch(urlSearch);
+      setPage(1);
+    }
   }, [searchParams]);
-
-  // Catalog filters & pagination
-  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [categoryId, setCategoryId] = useState("ALL");
   const [supplierId, setSupplierId] = useState("ALL");
