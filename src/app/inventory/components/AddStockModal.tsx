@@ -179,13 +179,11 @@ export function AddStockModal({ isOpen, onClose, product }: AddStockModalProps) 
         const initialUnitId = initialUnitObj?.unitId || "";
         const conversionFactor = initialUnitObj?.conversionFactor || 1;
 
-        // Suggested Qty (converted to selected unit)
+        // Suggested Qty (hanya jika ada saran order dari tab Rekomendasi Restock, selebihnya default ke 1)
         let initialQty = 1;
         if (product.suggestedOrderQty !== undefined && product.suggestedOrderQty > 0) {
           const qtyInUnit = product.suggestedOrderQty / conversionFactor;
           initialQty = Number.isInteger(qtyInUnit) ? qtyInUnit : Number(qtyInUnit.toFixed(2));
-        } else if (product.minStock) {
-          initialQty = product.minStock;
         }
 
         // Cost / Harga Beli for the selected unit
@@ -427,8 +425,6 @@ export function AddStockModal({ isOpen, onClose, product }: AddStockModalProps) 
                               if (selectedProd.suggestedOrderQty) {
                                 const q = selectedProd.suggestedOrderQty / factor;
                                 calcQty = Number.isInteger(q) ? q : Number(q.toFixed(2));
-                              } else if (selectedProd.minStock) {
-                                calcQty = selectedProd.minStock;
                               }
 
                               setValue(`items.${index}.unitId`, String(unitObj?.unitId || ""));
