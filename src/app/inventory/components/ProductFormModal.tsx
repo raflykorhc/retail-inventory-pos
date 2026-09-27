@@ -30,7 +30,6 @@ import { Plus, Trash2, Upload, X, Image as ImageIcon, AlertCircle, CheckCircle2 
 import axiosClient from "@/lib/axiosClient";
 import { cn } from "@/lib/utils";
 import { SafetyScaleShiftModal, type PreflightData } from "./SafetyScaleShiftModal";
-import { ReorderableContainer, DragHandle } from "@/components/ui/reorderable";
 
 function FormCombobox({
   value,
@@ -154,7 +153,7 @@ export function ProductFormModal({ open, onOpenChange, editData }: Props) {
     },
   });
 
-  const { fields, append, remove, move } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "prices",
   });
@@ -506,8 +505,7 @@ export function ProductFormModal({ open, onOpenChange, editData }: Props) {
                     </div>
 
                     <div className="border rounded-xl overflow-hidden bg-muted/20">
-                      <div className="grid grid-cols-[28px_minmax(120px,1fr)_1fr_1fr_1fr_auto] gap-2 p-3 bg-muted text-[10px] font-bold text-muted-foreground uppercase tracking-wider items-center">
-                        <div></div>
+                      <div className="grid grid-cols-[minmax(120px,1fr)_1fr_1fr_1fr_40px] gap-2 p-3 bg-muted text-[10px] font-bold text-muted-foreground uppercase tracking-wider items-center">
                         <div>Satuan <span className="text-destructive">*</span></div>
                         <div>Rasio (Isi) <span className="text-destructive">*</span></div>
                         <div>Harga Jual <span className="text-destructive">*</span></div>
@@ -520,81 +518,73 @@ export function ProductFormModal({ open, onOpenChange, editData }: Props) {
                       </div>
 
                       <div className="p-2 space-y-2">
-                        <ReorderableContainer
-                          items={fields}
-                          onReorder={(_, fromIndex, toIndex) => move(fromIndex, toIndex)}
-                          renderItem={(field, index, dragHandleProps) => (
-                            <div className="grid grid-cols-[28px_minmax(120px,1fr)_1fr_1fr_1fr_40px] gap-2 items-start">
-                              <div className="flex justify-center pt-2">
-                                <DragHandle {...dragHandleProps} />
-                              </div>
-
-                              <div>
-                                <Controller
-                                  control={form.control}
-                                  name={`prices.${index}.unitId`}
-                                  render={({ field: selectField }) => (
-                                    <FormCombobox
-                                      value={selectField.value}
-                                      onChange={selectField.onChange}
-                                      options={units || []}
-                                      placeholder="Pilih..."
-                                      searchPlaceholder="Cari satuan..."
-                                      emptyText="Satuan tidak ditemukan."
-                                      className="h-9 text-xs"
-                                    />
-                                  )}
-                                />
-                                {form.formState.errors.prices?.[index]?.unitId && <p className="text-[10px] text-destructive mt-1">{form.formState.errors.prices[index]?.unitId?.message}</p>}
-                              </div>
-
-                              <div>
-                                <Input
-                                  type="number"
-                                  step="any"
-                                  className="h-9 text-xs"
-                                  placeholder="Contoh: 1, 10, 24"
-                                  title="1 Satuan ini sama dengan berapa satuan dasar (Pcs)?"
-                                  {...form.register(`prices.${index}.conversionFactor`)}
-                                />
-                                {form.formState.errors.prices?.[index]?.conversionFactor && <p className="text-[10px] text-destructive mt-1">{form.formState.errors.prices[index]?.conversionFactor?.message}</p>}
-                              </div>
-
-                              <div>
-                                <Input
-                                  type="number"
-                                  step="any"
-                                  className="h-9 text-xs"
-                                  placeholder="Harga"
-                                  {...form.register(`prices.${index}.price`)}
-                                />
-                              </div>
-
-                              <div>
-                                <Input
-                                  type="number"
-                                  step="any"
-                                  className="h-9 text-xs"
-                                  placeholder="Qty"
-                                  {...form.register(`prices.${index}.initialStockDetail`)}
-                                />
-                              </div>
-
-                              <div className="flex justify-center pt-1">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                  onClick={() => remove(index)}
-                                  disabled={fields.length === 1}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </div>
+                        {fields.map((field, index) => (
+                          <div key={field.id} className="grid grid-cols-[minmax(120px,1fr)_1fr_1fr_1fr_40px] gap-2 items-start">
+                            <div>
+                              <Controller
+                                control={form.control}
+                                name={`prices.${index}.unitId`}
+                                render={({ field: selectField }) => (
+                                  <FormCombobox
+                                    value={selectField.value}
+                                    onChange={selectField.onChange}
+                                    options={units || []}
+                                    placeholder="Pilih..."
+                                    searchPlaceholder="Cari satuan..."
+                                    emptyText="Satuan tidak ditemukan."
+                                    className="h-9 text-xs"
+                                  />
+                                )}
+                              />
+                              {form.formState.errors.prices?.[index]?.unitId && <p className="text-[10px] text-destructive mt-1">{form.formState.errors.prices[index]?.unitId?.message}</p>}
                             </div>
-                          )}
-                        />
+
+                            <div>
+                              <Input
+                                type="number"
+                                step="any"
+                                className="h-9 text-xs"
+                                placeholder="Contoh: 1, 10, 24"
+                                title="1 Satuan ini sama dengan berapa satuan dasar (Pcs)?"
+                                {...form.register(`prices.${index}.conversionFactor`)}
+                              />
+                              {form.formState.errors.prices?.[index]?.conversionFactor && <p className="text-[10px] text-destructive mt-1">{form.formState.errors.prices[index]?.conversionFactor?.message}</p>}
+                            </div>
+
+                            <div>
+                              <Input
+                                type="number"
+                                step="any"
+                                className="h-9 text-xs"
+                                placeholder="Harga"
+                                {...form.register(`prices.${index}.price`)}
+                              />
+                            </div>
+
+                            <div>
+                              <Input
+                                type="number"
+                                step="any"
+                                className="h-9 text-xs"
+                                placeholder="Qty"
+                                {...form.register(`prices.${index}.initialStockDetail`)}
+                              />
+                            </div>
+
+                            <div className="flex justify-center pt-1">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => remove(index)}
+                                disabled={fields.length === 1}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                     {form.formState.errors.prices?.root && (
