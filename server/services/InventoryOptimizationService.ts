@@ -218,6 +218,7 @@ export class InventoryOptimizationService {
 
     // 7. Langkah 3: Penetapan Kategori & Kalkulasi Batas Stok Dinamis Min-Max
     let cumulativeUsageValue = 0;
+    let runningRoundedCumulativePercentage = 0;
     const results: OptimizationResult[] = [];
 
     for (const entry of sortedProducts) {
@@ -225,16 +226,18 @@ export class InventoryOptimizationService {
       const { dailyData, totalUsageValue, totalBaseUnitsSold } = agg;
 
       // Hitung persentase kontribusi individu dan kumulatif
-      const individualPercentage =
+      const individualPercentageRaw =
         grandTotalUsageValue > 0
           ? (totalUsageValue / grandTotalUsageValue) * 100
           : 0;
 
+      const individualPercentage = Math.round(individualPercentageRaw * 100) / 100;
+      runningRoundedCumulativePercentage += individualPercentage;
+      
+      // Prevent floating point precision issues from exceeding 100%
+      const cumulativePercentage = Math.min(Math.round(runningRoundedCumulativePercentage * 100) / 100, 100);
+
       cumulativeUsageValue += totalUsageValue;
-      const cumulativePercentage =
-        grandTotalUsageValue > 0
-          ? (cumulativeUsageValue / grandTotalUsageValue) * 100
-          : 100;
 
       // Penetapan Kategori Pareto: A (0-80%), B (80-95%), C (95-100%)
       let newAbcCategory: "A" | "B" | "C";

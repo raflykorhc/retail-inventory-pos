@@ -1038,13 +1038,20 @@ export function AbcOptimizationReport() {
                                 </HoverCardContent>
                               </HoverCard>
                               {r.averageDailyDemand > 0 ? (
-                                <div className="flex flex-wrap items-center gap-1.5 font-mono text-[11px] mt-1 mb-1">
-                                  <span className="bg-background border border-border/60 text-muted-foreground px-1.5 py-0.5 rounded" title="Stok Min">{r.suggestedMin}</span>
-                                  <span className="text-muted-foreground">+</span>
-                                  <span className="bg-background border border-border/60 text-muted-foreground px-1.5 py-0.5 rounded" title="Avg Demand × Tahan Stok (Hari)">({r.averageDailyDemand} × {r.currentHoldingInterval ?? 14}h)</span>
-                                  <span className="text-muted-foreground">=</span>
-                                  <span className="bg-primary/10 text-primary font-bold px-1.5 py-0.5 rounded">{r.suggestedMax}</span>
-                                </div>
+                                <>
+                                  <div className="flex flex-wrap items-center gap-1.5 font-mono text-[11px] mt-1 mb-1">
+                                    <span className="bg-background border border-border/60 text-muted-foreground px-1.5 py-0.5 rounded" title="Stok Min">{r.suggestedMin}</span>
+                                    <span className="text-muted-foreground">+</span>
+                                    <span className="bg-background border border-border/60 text-muted-foreground px-1.5 py-0.5 rounded" title="Avg Demand × Tahan Stok (Hari)">({r.averageDailyDemand} × {r.currentHoldingInterval ?? 14}h)</span>
+                                    <span className="text-muted-foreground">=</span>
+                                    <span className="bg-primary/10 text-primary font-bold px-1.5 py-0.5 rounded">{r.suggestedMax}</span>
+                                  </div>
+                                  {(r.warehouseCapacity && r.warehouseCapacity > 0 && r.suggestedMax === r.warehouseCapacity) && (
+                                    <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5 mb-1 italic">
+                                      *Dibatasi oleh kapasitas gudang ({r.warehouseCapacity})
+                                    </p>
+                                  )}
+                                </>
                               ) : (
                                 <p className="font-semibold text-foreground text-[11px] mt-1 mb-1">Fallback (2 × Min) = {r.suggestedMax} unit</p>
                               )}

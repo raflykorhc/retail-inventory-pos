@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import bcrypt from 'bcryptjs';
+import { PrismaClient } from '@prisma/client';
 
 let idCounter = 1000;
 function makeId(prefix: string): string {
@@ -9,7 +10,7 @@ function makeId(prefix: string): string {
 }
 
 async function generate() {
-  console.log('Generating simulation SQL script with fixed batch unit prices...');
+  console.log('Generating simulation SQL script and seeding database with updated pricing & conversions...');
 
   const passwordHash = await bcrypt.hash('kasir123', 10);
   const adminPasswordHash = await bcrypt.hash('admin123', 10);
@@ -43,44 +44,45 @@ async function generate() {
   const uKgId = 'unit_kg';
   const uQuarterKgId = 'unit_quarter_kg';
 
-  // Products
+  // Products (Updated with new modal, selling prices, and conversions)
+  // Products (Updated with new modal, selling prices, and conversions)
   const pSemen = {
     id: 'prod_semen_01',
     code: 'BRG-SEM-001',
-    name: 'Semen Tiga Roda 40 KG',
-    description: 'Semen PCC Tiga Roda Kemasan 40 KG',
+    name: 'SEMEN GARUDA 40KG',
+    description: 'Semen PCC Garuda Kemasan 40 KG',
     categoryId: catSemenId,
-    stock: 30, // 180 bought - 150 sold
-    minStock: 45,
-    maxStock: 255,
-    averageCost: 59000,
+    stock: 60, // 300 bought - 240 sold
+    minStock: 64,
+    maxStock: 176,
+    averageCost: 43000,
     supplierId: supplierId,
     abcCategory: 'A',
-    leadTime: 3,
-    safetyStockDays: 3,
-    warehouseCapacity: 150,
-    suggestedMin: 45,
-    suggestedMax: 255,
+    leadTime: 4,
+    safetyStockDays: 4,
+    warehouseCapacity: 250,
+    suggestedMin: 64,
+    suggestedMax: 176,
     baseUnitId: uZakId,
   };
 
   const pBesi = {
     id: 'prod_besi_01',
     code: 'BRG-BSI-001',
-    name: 'Besi 10',
-    description: 'Besi Beton Polos Diameter 10 mm Panjang 12m',
+    name: 'Besi 10MM Uril',
+    description: 'Besi Beton Polos/Uril Diameter 10 mm Panjang 12m',
     categoryId: catBesiId,
     stock: 20, // 120 bought - 100 sold
-    minStock: 75,
-    maxStock: 285,
-    averageCost: 74000,
+    minStock: 20,
+    maxStock: 67,
+    averageCost: 52500,
     supplierId: supplierId,
-    abcCategory: 'A',
+    abcCategory: 'B',
     leadTime: 5,
     safetyStockDays: 1,
     warehouseCapacity: 100,
-    suggestedMin: 75,
-    suggestedMax: 285,
+    suggestedMin: 20,
+    suggestedMax: 67,
     baseUnitId: uBatangId,
   };
 
@@ -90,17 +92,17 @@ async function generate() {
     name: 'Pasir Cor',
     description: 'Pasir Cor Kualitas Tinggi Bulk / Karung',
     categoryId: catPasirId,
-    stock: 450, // 720 bought - 270 sold
-    minStock: 120,
-    maxStock: 150, // clamped from 960 to capacity 150
-    averageCost: 25000,
+    stock: 540, // 1800 bought - 1260 sold
+    minStock: 126,
+    maxStock: 714,
+    averageCost: 7222.22,
     supplierId: supplierId,
     abcCategory: 'A',
     leadTime: 2,
-    safetyStockDays: 2,
-    warehouseCapacity: 150,
-    suggestedMin: 120,
-    suggestedMax: 150,
+    safetyStockDays: 1,
+    warehouseCapacity: 800,
+    suggestedMin: 126,
+    suggestedMax: 714,
     baseUnitId: uKarungId,
   };
 
@@ -110,17 +112,17 @@ async function generate() {
     name: 'Split',
     description: 'Batu Split Batu Pecah 2/3 Karung',
     categoryId: catPasirId,
-    stock: 90, // 360 bought - 270 sold
-    minStock: 120,
-    maxStock: 960,
-    averageCost: 25000,
+    stock: 270, // 900 bought - 630 sold
+    minStock: 63,
+    maxStock: 300, // clamped from 357 to capacity 300
+    averageCost: 10555.56,
     supplierId: supplierId,
     abcCategory: 'A',
     leadTime: 2,
     safetyStockDays: 1,
-    warehouseCapacity: 200,
-    suggestedMin: 120,
-    suggestedMax: 960,
+    warehouseCapacity: 300,
+    suggestedMin: 63,
+    suggestedMax: 300,
     baseUnitId: uKarungId,
   };
 
@@ -130,17 +132,17 @@ async function generate() {
     name: 'Bata Ringan / Hebel 10',
     description: 'Bata Ringan AAC Ketebalan 10 cm',
     categoryId: catBataId,
-    stock: 166, // 996 bought - 830 sold
-    minStock: 400,
-    maxStock: 1800,
-    averageCost: 7228,
+    stock: 425, // 2550 bought (30 kubik x 85) - 2125 sold (25 kubik x 85)
+    minStock: 355,
+    maxStock: 1347,
+    averageCost: 6000,
     supplierId: supplierId,
     abcCategory: 'A',
     leadTime: 4,
     safetyStockDays: 1,
-    warehouseCapacity: 600,
-    suggestedMin: 400,
-    suggestedMax: 1800,
+    warehouseCapacity: 1500,
+    suggestedMin: 355,
+    suggestedMax: 1347,
     baseUnitId: uPcsId,
   };
 
@@ -150,17 +152,17 @@ async function generate() {
     name: 'Cat Aries 725 Putih Salju',
     description: 'Cat Tembok Aries 725 Putih Salju 5 KG Galon',
     categoryId: catCatId,
-    stock: 24, // 100 bought - 76 sold
-    minStock: 70,
-    maxStock: 210,
-    averageCost: 75000,
+    stock: 10, // 40 bought - 30 sold
+    minStock: 0,
+    maxStock: 0,
+    averageCost: 83000,
     supplierId: supplierId,
-    abcCategory: 'B',
+    abcCategory: 'C',
     leadTime: 7,
     safetyStockDays: 1,
     warehouseCapacity: 80,
-    suggestedMin: 70,
-    suggestedMax: 210,
+    suggestedMin: 0,
+    suggestedMax: 0,
     baseUnitId: uGalonId,
   };
 
@@ -170,17 +172,17 @@ async function generate() {
     name: 'Paku 5',
     description: 'Paku Kayu Ukuran 5 cm (2 inchi)',
     categoryId: catPakuId,
-    stock: 200, // 1500 bought - 1300 sold
-    minStock: 0,
-    maxStock: 0,
-    averageCost: 4000,
+    stock: 200, // 1000 bought - 800 sold
+    minStock: 107,
+    maxStock: 481,
+    averageCost: 3600,
     supplierId: supplierId,
-    abcCategory: 'C',
-    leadTime: 0,
-    safetyStockDays: 0,
-    warehouseCapacity: 0,
-    suggestedMin: 0,
-    suggestedMax: 0,
+    abcCategory: 'B',
+    leadTime: 3,
+    safetyStockDays: 1,
+    warehouseCapacity: 600,
+    suggestedMin: 107,
+    suggestedMax: 481,
     baseUnitId: uQuarterKgId,
   };
 
@@ -188,33 +190,33 @@ async function generate() {
 
   // Product Prices (Table 4.1 multi-unit conversions)
   const prices: { id: string; productId: string; unitId: string; price: number; convFactor: number }[] = [
-    // Semen Tiga Roda
-    { id: 'pp_sem_1', productId: pSemen.id, unitId: uZakId, price: 65000, convFactor: 1 },
+    // Semen Garuda 40KG
+    { id: 'pp_sem_1', productId: pSemen.id, unitId: uZakId, price: 45000, convFactor: 1 },
 
-    // Besi 10
-    { id: 'pp_bsi_1', productId: pBesi.id, unitId: uBatangId, price: 85000, convFactor: 1 },
+    // Besi 10MM Uril
+    { id: 'pp_bsi_1', productId: pBesi.id, unitId: uBatangId, price: 72000, convFactor: 1 },
 
     // Pasir Cor (Karung base, 1 Kol = 30 karung, 1 Truk = 360 karung)
     { id: 'pp_psr_1', productId: pPasir.id, unitId: uKarungId, price: 30000, convFactor: 1 },
-    { id: 'pp_psr_2', productId: pPasir.id, unitId: uKolId, price: 900000, convFactor: 30 },
-    { id: 'pp_psr_3', productId: pPasir.id, unitId: uTrukId, price: 10800000, convFactor: 360 },
+    { id: 'pp_psr_2', productId: pPasir.id, unitId: uKolId, price: 450000, convFactor: 30 },
+    { id: 'pp_psr_3', productId: pPasir.id, unitId: uTrukId, price: 3500000, convFactor: 360 },
 
     // Split (Karung base, 1 Kol = 30 karung, 1 Truk = 360 karung)
     { id: 'pp_spl_1', productId: pSplit.id, unitId: uKarungId, price: 30000, convFactor: 1 },
-    { id: 'pp_spl_2', productId: pSplit.id, unitId: uKolId, price: 900000, convFactor: 30 },
-    { id: 'pp_spl_3', productId: pSplit.id, unitId: uTrukId, price: 10800000, convFactor: 360 },
+    { id: 'pp_spl_2', productId: pSplit.id, unitId: uKolId, price: 550000, convFactor: 30 },
+    { id: 'pp_spl_3', productId: pSplit.id, unitId: uTrukId, price: 4500000, convFactor: 360 },
 
-    // Hebel (PCS base, 1 Kubik = 83 pcs)
-    { id: 'pp_hbl_1', productId: pHebel.id, unitId: uPcsId, price: 8500, convFactor: 1 },
-    { id: 'pp_hbl_2', productId: pHebel.id, unitId: uKubikId, price: 705500, convFactor: 83 },
+    // Hebel (PCS base, 1 Kubik = 85 pcs)
+    { id: 'pp_hbl_1', productId: pHebel.id, unitId: uPcsId, price: 8000, convFactor: 1 },
+    { id: 'pp_hbl_2', productId: pHebel.id, unitId: uKubikId, price: 650000, convFactor: 85 },
 
     // Cat Aries (Galon base)
-    { id: 'pp_cat_1', productId: pCat.id, unitId: uGalonId, price: 88000, convFactor: 1 },
+    { id: 'pp_cat_1', productId: pCat.id, unitId: uGalonId, price: 90000, convFactor: 1 },
 
     // Paku 5 (1/4 KG base, 1 KG = 4, 1 BOX = 100)
-    { id: 'pp_pku_1', productId: pPaku.id, unitId: uQuarterKgId, price: 5000, convFactor: 1 },
-    { id: 'pp_pku_2', productId: pPaku.id, unitId: uKgId, price: 20000, convFactor: 4 },
-    { id: 'pp_pku_3', productId: pPaku.id, unitId: uBoxId, price: 500000, convFactor: 100 },
+    { id: 'pp_pku_1', productId: pPaku.id, unitId: uQuarterKgId, price: 4500, convFactor: 1 },
+    { id: 'pp_pku_2', productId: pPaku.id, unitId: uKgId, price: 18000, convFactor: 4 },
+    { id: 'pp_pku_3', productId: pPaku.id, unitId: uBoxId, price: 450000, convFactor: 100 },
   ];
 
   // Purchases (Table 4.2)
@@ -226,13 +228,14 @@ async function generate() {
       batchCode: 'B1-SEM',
       product: pSemen,
       unitId: uZakId,
-      qty: 60,
-      costPrice: 58000,
-      sellingPrice: 65000,
+      qty: 100,
+      costPrice: 42000,
+      sellingPrice: 45000,
       convFactor: 1,
       batchId: 'batch_b1_sem',
-      costPriceBase: 58000,
-      sellingPriceBase: 65000,
+      baseQty: 100,
+      costPriceBase: 42000,
+      sellingPriceBase: 45000,
     },
     {
       id: 'purch_02',
@@ -242,12 +245,13 @@ async function generate() {
       product: pBesi,
       unitId: uBatangId,
       qty: 60,
-      costPrice: 73000,
-      sellingPrice: 85000,
+      costPrice: 52000,
+      sellingPrice: 72000,
       convFactor: 1,
       batchId: 'batch_b1_bsi',
-      costPriceBase: 73000,
-      sellingPriceBase: 85000,
+      baseQty: 60,
+      costPriceBase: 52000,
+      sellingPriceBase: 72000,
     },
     {
       id: 'purch_03',
@@ -256,13 +260,13 @@ async function generate() {
       batchCode: 'B1-SPL',
       product: pSplit,
       unitId: uTrukId,
-      qty: 1,
-      costPrice: 9000000,
-      sellingPrice: 10800000,
+      qty: 2.5,
+      costPrice: 3800000,
+      sellingPrice: 4500000,
       convFactor: 360,
       batchId: 'batch_b1_spl',
-      baseQty: 360,
-      costPriceBase: 25000,
+      baseQty: 900,
+      costPriceBase: 10555.56,
       sellingPriceBase: 30000,
     },
     {
@@ -272,14 +276,14 @@ async function generate() {
       batchCode: 'B1-HBL',
       product: pHebel,
       unitId: uKubikId,
-      qty: 12,
-      costPrice: 599924,
-      sellingPrice: 705500,
-      convFactor: 83,
+      qty: 30,
+      costPrice: 510000,
+      sellingPrice: 650000,
+      convFactor: 85,
       batchId: 'batch_b1_hbl',
-      baseQty: 996,
-      costPriceBase: 7228,
-      sellingPriceBase: 8500,
+      baseQty: 2550,
+      costPriceBase: 6000,
+      sellingPriceBase: 8000,
     },
     {
       id: 'purch_05',
@@ -288,13 +292,14 @@ async function generate() {
       batchCode: 'B1-CAT',
       product: pCat,
       unitId: uGalonId,
-      qty: 100,
-      costPrice: 75000,
-      sellingPrice: 88000,
+      qty: 40,
+      costPrice: 83000,
+      sellingPrice: 90000,
       convFactor: 1,
       batchId: 'batch_b1_cat',
-      costPriceBase: 75000,
-      sellingPriceBase: 88000,
+      baseQty: 40,
+      costPriceBase: 83000,
+      sellingPriceBase: 90000,
     },
     {
       id: 'purch_06',
@@ -303,29 +308,29 @@ async function generate() {
       batchCode: 'B1-PKU',
       product: pPaku,
       unitId: uBoxId,
-      qty: 15,
-      costPrice: 400000,
-      sellingPrice: 500000,
+      qty: 10,
+      costPrice: 360000,
+      sellingPrice: 450000,
       convFactor: 100,
       batchId: 'batch_b1_pku',
-      baseQty: 1500,
-      costPriceBase: 4000,
-      sellingPriceBase: 5000,
+      baseQty: 1000,
+      costPriceBase: 3600,
+      sellingPriceBase: 4500,
     },
     {
       id: 'purch_07',
-      inv: 'PO/20260805/0001',
-      date: '2026-08-05 08:00:00',
+      inv: 'PO/20260801/0007',
+      date: '2026-08-01 11:00:00',
       batchCode: 'B1-PSR',
       product: pPasir,
       unitId: uTrukId,
-      qty: 2,
-      costPrice: 9000000,
-      sellingPrice: 10800000,
+      qty: 5,
+      costPrice: 2600000,
+      sellingPrice: 3500000,
       convFactor: 360,
       batchId: 'batch_b1_psr',
-      baseQty: 720,
-      costPriceBase: 25000,
+      baseQty: 1800,
+      costPriceBase: 7222.22,
       sellingPriceBase: 30000,
     },
     {
@@ -335,13 +340,14 @@ async function generate() {
       batchCode: 'B2-SEM',
       product: pSemen,
       unitId: uZakId,
-      qty: 60,
-      costPrice: 59000,
-      sellingPrice: 65000,
+      qty: 100,
+      costPrice: 43000,
+      sellingPrice: 45000,
       convFactor: 1,
       batchId: 'batch_b2_sem',
-      costPriceBase: 59000,
-      sellingPriceBase: 65000,
+      baseQty: 100,
+      costPriceBase: 43000,
+      sellingPriceBase: 45000,
     },
     {
       id: 'purch_09',
@@ -350,13 +356,14 @@ async function generate() {
       batchCode: 'B3-SEM',
       product: pSemen,
       unitId: uZakId,
-      qty: 60,
-      costPrice: 60000,
-      sellingPrice: 65000,
+      qty: 100,
+      costPrice: 44000,
+      sellingPrice: 45000,
       convFactor: 1,
       batchId: 'batch_b3_sem',
-      costPriceBase: 60000,
-      sellingPriceBase: 65000,
+      baseQty: 100,
+      costPriceBase: 44000,
+      sellingPriceBase: 45000,
     },
     {
       id: 'purch_10',
@@ -366,12 +373,13 @@ async function generate() {
       product: pBesi,
       unitId: uBatangId,
       qty: 60,
-      costPrice: 75000,
-      sellingPrice: 85000,
+      costPrice: 53000,
+      sellingPrice: 72000,
       convFactor: 1,
       batchId: 'batch_b2_bsi',
-      costPriceBase: 75000,
-      sellingPriceBase: 85000,
+      baseQty: 60,
+      costPriceBase: 53000,
+      sellingPriceBase: 72000,
     },
   ];
 
@@ -379,13 +387,13 @@ async function generate() {
   const batchRemainingQty: Record<string, number> = {
     'batch_b1_sem': 0,
     'batch_b2_sem': 0,
-    'batch_b3_sem': 30,
+    'batch_b3_sem': 60,
     'batch_b1_bsi': 0,
     'batch_b2_bsi': 20,
-    'batch_b1_psr': 450,
-    'batch_b1_spl': 90,
-    'batch_b1_hbl': 166,
-    'batch_b1_cat': 24,
+    'batch_b1_psr': 540,
+    'batch_b1_spl': 270,
+    'batch_b1_hbl': 425,
+    'batch_b1_cat': 10,
     'batch_b1_pku': 200,
   };
 
@@ -422,123 +430,128 @@ async function generate() {
     });
   }
 
-  // --- Semen Sales trajectory (Total 150 ZAK) ---
-  addSale('2026-08-01 11:15:00', [{ product: pSemen, unitId: uZakId, qty: 8, priceAtSale: 65000, convFactor: 1, batchId: 'batch_b1_sem', costPriceBase: 58000, baseQty: 8 }]);
-  addSale('2026-08-02 10:20:00', [{ product: pSemen, unitId: uZakId, qty: 6, priceAtSale: 65000, convFactor: 1, batchId: 'batch_b1_sem', costPriceBase: 58000, baseQty: 6 }]);
-  addSale('2026-08-03 14:10:00', [{ product: pSemen, unitId: uZakId, qty: 7, priceAtSale: 65000, convFactor: 1, batchId: 'batch_b1_sem', costPriceBase: 58000, baseQty: 7 }]);
-  addSale('2026-08-04 15:45:00', [{ product: pSemen, unitId: uZakId, qty: 5, priceAtSale: 65000, convFactor: 1, batchId: 'batch_b1_sem', costPriceBase: 58000, baseQty: 5 }]);
-  addSale('2026-08-05 13:00:00', [{ product: pSemen, unitId: uZakId, qty: 9, priceAtSale: 65000, convFactor: 1, batchId: 'batch_b1_sem', costPriceBase: 58000, baseQty: 9 }]);
-  addSale('2026-08-06 09:30:00', [{ product: pSemen, unitId: uZakId, qty: 6, priceAtSale: 65000, convFactor: 1, batchId: 'batch_b1_sem', costPriceBase: 58000, baseQty: 6 }]);
-  addSale('2026-08-07 16:20:00', [{ product: pSemen, unitId: uZakId, qty: 8, priceAtSale: 65000, convFactor: 1, batchId: 'batch_b1_sem', costPriceBase: 58000, baseQty: 8 }]);
-  addSale('2026-08-08 11:00:00', [{ product: pSemen, unitId: uZakId, qty: 6, priceAtSale: 65000, convFactor: 1, batchId: 'batch_b1_sem', costPriceBase: 58000, baseQty: 6 }]);
-  addSale('2026-08-09 14:50:00', [{ product: pSemen, unitId: uZakId, qty: 5, priceAtSale: 65000, convFactor: 1, batchId: 'batch_b1_sem', costPriceBase: 58000, baseQty: 5 }]);
+  // --- Semen Garuda 40KG Sales trajectory (Total 240 ZAK) ---
+  // Batch 1 (100 ZAK bought): 60 sold before Aug 10, 40 sold on Aug 10.
+  addSale('2026-08-01 11:15:00', [{ product: pSemen, unitId: uZakId, qty: 8, priceAtSale: 45000, convFactor: 1, batchId: 'batch_b1_sem', costPriceBase: 42000, baseQty: 8 }]);
+  addSale('2026-08-02 10:20:00', [{ product: pSemen, unitId: uZakId, qty: 6, priceAtSale: 45000, convFactor: 1, batchId: 'batch_b1_sem', costPriceBase: 42000, baseQty: 6 }]);
+  addSale('2026-08-03 14:10:00', [{ product: pSemen, unitId: uZakId, qty: 7, priceAtSale: 45000, convFactor: 1, batchId: 'batch_b1_sem', costPriceBase: 42000, baseQty: 7 }]);
+  addSale('2026-08-04 15:45:00', [{ product: pSemen, unitId: uZakId, qty: 5, priceAtSale: 45000, convFactor: 1, batchId: 'batch_b1_sem', costPriceBase: 42000, baseQty: 5 }]);
+  addSale('2026-08-05 13:00:00', [{ product: pSemen, unitId: uZakId, qty: 9, priceAtSale: 45000, convFactor: 1, batchId: 'batch_b1_sem', costPriceBase: 42000, baseQty: 9 }]);
+  addSale('2026-08-06 09:30:00', [{ product: pSemen, unitId: uZakId, qty: 6, priceAtSale: 45000, convFactor: 1, batchId: 'batch_b1_sem', costPriceBase: 42000, baseQty: 6 }]);
+  addSale('2026-08-07 16:20:00', [{ product: pSemen, unitId: uZakId, qty: 8, priceAtSale: 45000, convFactor: 1, batchId: 'batch_b1_sem', costPriceBase: 42000, baseQty: 8 }]);
+  addSale('2026-08-08 11:00:00', [{ product: pSemen, unitId: uZakId, qty: 6, priceAtSale: 45000, convFactor: 1, batchId: 'batch_b1_sem', costPriceBase: 42000, baseQty: 6 }]);
+  addSale('2026-08-09 14:50:00', [{ product: pSemen, unitId: uZakId, qty: 5, priceAtSale: 45000, convFactor: 1, batchId: 'batch_b1_sem', costPriceBase: 42000, baseQty: 5 }]);
 
-  addSale('2026-08-10 10:15:00', [{ product: pSemen, unitId: uZakId, qty: 6, priceAtSale: 65000, convFactor: 1, batchId: 'batch_b2_sem', costPriceBase: 59000, baseQty: 6 }]);
-  addSale('2026-08-11 11:30:00', [{ product: pSemen, unitId: uZakId, qty: 7, priceAtSale: 65000, convFactor: 1, batchId: 'batch_b2_sem', costPriceBase: 59000, baseQty: 7 }]);
-  addSale('2026-08-12 09:40:00', [{ product: pSemen, unitId: uZakId, qty: 5, priceAtSale: 65000, convFactor: 1, batchId: 'batch_b2_sem', costPriceBase: 59000, baseQty: 5 }]);
-  addSale('2026-08-13 14:00:00', [{ product: pSemen, unitId: uZakId, qty: 8, priceAtSale: 65000, convFactor: 1, batchId: 'batch_b2_sem', costPriceBase: 59000, baseQty: 8 }]);
-  addSale('2026-08-14 16:10:00', [{ product: pSemen, unitId: uZakId, qty: 6, priceAtSale: 65000, convFactor: 1, batchId: 'batch_b2_sem', costPriceBase: 59000, baseQty: 6 }]);
-  addSale('2026-08-15 10:00:00', [{ product: pSemen, unitId: uZakId, qty: 15, priceAtSale: 65000, convFactor: 1, batchId: 'batch_b2_sem', costPriceBase: 59000, baseQty: 15 }]);
-  addSale('2026-08-16 13:20:00', [{ product: pSemen, unitId: uZakId, qty: 4, priceAtSale: 65000, convFactor: 1, batchId: 'batch_b2_sem', costPriceBase: 59000, baseQty: 4 }]);
-  addSale('2026-08-17 15:10:00', [{ product: pSemen, unitId: uZakId, qty: 3, priceAtSale: 65000, convFactor: 1, batchId: 'batch_b2_sem', costPriceBase: 59000, baseQty: 3 }]);
-  addSale('2026-08-18 11:45:00', [{ product: pSemen, unitId: uZakId, qty: 4, priceAtSale: 65000, convFactor: 1, batchId: 'batch_b2_sem', costPriceBase: 59000, baseQty: 4 }]);
-  addSale('2026-08-19 14:30:00', [{ product: pSemen, unitId: uZakId, qty: 2, priceAtSale: 65000, convFactor: 1, batchId: 'batch_b2_sem', costPriceBase: 59000, baseQty: 2 }]);
+  // Aug 10: FIFO Test sale (50 ZAK: 40 from Batch 1, 10 from Batch 2)
+  addSale('2026-08-10 10:15:00', [
+    { product: pSemen, unitId: uZakId, qty: 40, priceAtSale: 45000, convFactor: 1, batchId: 'batch_b1_sem', costPriceBase: 42000, baseQty: 40 },
+    { product: pSemen, unitId: uZakId, qty: 10, priceAtSale: 45000, convFactor: 1, batchId: 'batch_b2_sem', costPriceBase: 43000, baseQty: 10 },
+  ]);
 
-  addSale('2026-08-20 11:00:00', [{ product: pSemen, unitId: uZakId, qty: 3, priceAtSale: 65000, convFactor: 1, batchId: 'batch_b3_sem', costPriceBase: 60000, baseQty: 3 }]);
-  addSale('2026-08-21 14:15:00', [{ product: pSemen, unitId: uZakId, qty: 3, priceAtSale: 65000, convFactor: 1, batchId: 'batch_b3_sem', costPriceBase: 60000, baseQty: 3 }]);
-  addSale('2026-08-22 10:30:00', [{ product: pSemen, unitId: uZakId, qty: 2, priceAtSale: 65000, convFactor: 1, batchId: 'batch_b3_sem', costPriceBase: 60000, baseQty: 2 }]);
-  addSale('2026-08-23 15:00:00', [{ product: pSemen, unitId: uZakId, qty: 3, priceAtSale: 65000, convFactor: 1, batchId: 'batch_b3_sem', costPriceBase: 60000, baseQty: 3 }]);
-  addSale('2026-08-24 09:45:00', [{ product: pSemen, unitId: uZakId, qty: 3, priceAtSale: 65000, convFactor: 1, batchId: 'batch_b3_sem', costPriceBase: 60000, baseQty: 3 }]);
-  addSale('2026-08-25 13:40:00', [{ product: pSemen, unitId: uZakId, qty: 3, priceAtSale: 65000, convFactor: 1, batchId: 'batch_b3_sem', costPriceBase: 60000, baseQty: 3 }]);
-  addSale('2026-08-26 16:00:00', [{ product: pSemen, unitId: uZakId, qty: 2, priceAtSale: 65000, convFactor: 1, batchId: 'batch_b3_sem', costPriceBase: 60000, baseQty: 2 }]);
-  addSale('2026-08-27 11:20:00', [{ product: pSemen, unitId: uZakId, qty: 3, priceAtSale: 65000, convFactor: 1, batchId: 'batch_b3_sem', costPriceBase: 60000, baseQty: 3 }]);
-  addSale('2026-08-28 14:10:00', [{ product: pSemen, unitId: uZakId, qty: 3, priceAtSale: 65000, convFactor: 1, batchId: 'batch_b3_sem', costPriceBase: 60000, baseQty: 3 }]);
-  addSale('2026-08-29 10:50:00', [{ product: pSemen, unitId: uZakId, qty: 5, priceAtSale: 65000, convFactor: 1, batchId: 'batch_b3_sem', costPriceBase: 60000, baseQty: 5 }]);
+  // Batch 2 (100 ZAK bought, 10 sold on Aug 10, 90 sold Aug 11-19)
+  addSale('2026-08-11 11:30:00', [{ product: pSemen, unitId: uZakId, qty: 12, priceAtSale: 45000, convFactor: 1, batchId: 'batch_b2_sem', costPriceBase: 43000, baseQty: 12 }]);
+  addSale('2026-08-12 09:40:00', [{ product: pSemen, unitId: uZakId, qty: 10, priceAtSale: 45000, convFactor: 1, batchId: 'batch_b2_sem', costPriceBase: 43000, baseQty: 10 }]);
+  addSale('2026-08-13 14:00:00', [{ product: pSemen, unitId: uZakId, qty: 15, priceAtSale: 45000, convFactor: 1, batchId: 'batch_b2_sem', costPriceBase: 43000, baseQty: 15 }]);
+  addSale('2026-08-14 16:10:00', [{ product: pSemen, unitId: uZakId, qty: 10, priceAtSale: 45000, convFactor: 1, batchId: 'batch_b2_sem', costPriceBase: 43000, baseQty: 10 }]);
+  addSale('2026-08-15 10:00:00', [{ product: pSemen, unitId: uZakId, qty: 15, priceAtSale: 45000, convFactor: 1, batchId: 'batch_b2_sem', costPriceBase: 43000, baseQty: 15 }]);
+  addSale('2026-08-16 13:20:00', [{ product: pSemen, unitId: uZakId, qty: 8, priceAtSale: 45000, convFactor: 1, batchId: 'batch_b2_sem', costPriceBase: 43000, baseQty: 8 }]);
+  addSale('2026-08-17 15:10:00', [{ product: pSemen, unitId: uZakId, qty: 7, priceAtSale: 45000, convFactor: 1, batchId: 'batch_b2_sem', costPriceBase: 43000, baseQty: 7 }]);
+  addSale('2026-08-18 11:45:00', [{ product: pSemen, unitId: uZakId, qty: 8, priceAtSale: 45000, convFactor: 1, batchId: 'batch_b2_sem', costPriceBase: 43000, baseQty: 8 }]);
+  addSale('2026-08-19 14:30:00', [{ product: pSemen, unitId: uZakId, qty: 5, priceAtSale: 45000, convFactor: 1, batchId: 'batch_b2_sem', costPriceBase: 43000, baseQty: 5 }]);
 
-  // --- Besi 10 Sales trajectory (Total 100 BATANG) ---
-  addSale('2026-08-01 14:00:00', [{ product: pBesi, unitId: uBatangId, qty: 5, priceAtSale: 85000, convFactor: 1, batchId: 'batch_b1_bsi', costPriceBase: 73000, baseQty: 5 }]);
-  addSale('2026-08-03 11:30:00', [{ product: pBesi, unitId: uBatangId, qty: 8, priceAtSale: 85000, convFactor: 1, batchId: 'batch_b1_bsi', costPriceBase: 73000, baseQty: 8 }]);
-  addSale('2026-08-05 15:10:00', [{ product: pBesi, unitId: uBatangId, qty: 6, priceAtSale: 85000, convFactor: 1, batchId: 'batch_b1_bsi', costPriceBase: 73000, baseQty: 6 }]);
-  addSale('2026-08-08 10:45:00', [{ product: pBesi, unitId: uBatangId, qty: 7, priceAtSale: 85000, convFactor: 1, batchId: 'batch_b1_bsi', costPriceBase: 73000, baseQty: 7 }]);
-  addSale('2026-08-10 14:20:00', [{ product: pBesi, unitId: uBatangId, qty: 5, priceAtSale: 85000, convFactor: 1, batchId: 'batch_b1_bsi', costPriceBase: 73000, baseQty: 5 }]);
-  addSale('2026-08-12 11:00:00', [{ product: pBesi, unitId: uBatangId, qty: 15, priceAtSale: 85000, convFactor: 1, batchId: 'batch_b1_bsi', costPriceBase: 73000, baseQty: 15 }]);
-  addSale('2026-08-14 13:50:00', [{ product: pBesi, unitId: uBatangId, qty: 6, priceAtSale: 85000, convFactor: 1, batchId: 'batch_b1_bsi', costPriceBase: 73000, baseQty: 6 }]);
-  addSale('2026-08-17 16:00:00', [{ product: pBesi, unitId: uBatangId, qty: 8, priceAtSale: 85000, convFactor: 1, batchId: 'batch_b1_bsi', costPriceBase: 73000, baseQty: 8 }]);
+  // Batch 3 (100 ZAK bought, 40 sold Aug 20-29, 60 remaining)
+  addSale('2026-08-20 11:00:00', [{ product: pSemen, unitId: uZakId, qty: 4, priceAtSale: 45000, convFactor: 1, batchId: 'batch_b3_sem', costPriceBase: 44000, baseQty: 4 }]);
+  addSale('2026-08-21 14:15:00', [{ product: pSemen, unitId: uZakId, qty: 4, priceAtSale: 45000, convFactor: 1, batchId: 'batch_b3_sem', costPriceBase: 44000, baseQty: 4 }]);
+  addSale('2026-08-22 10:30:00', [{ product: pSemen, unitId: uZakId, qty: 4, priceAtSale: 45000, convFactor: 1, batchId: 'batch_b3_sem', costPriceBase: 44000, baseQty: 4 }]);
+  addSale('2026-08-23 15:00:00', [{ product: pSemen, unitId: uZakId, qty: 4, priceAtSale: 45000, convFactor: 1, batchId: 'batch_b3_sem', costPriceBase: 44000, baseQty: 4 }]);
+  addSale('2026-08-24 09:45:00', [{ product: pSemen, unitId: uZakId, qty: 4, priceAtSale: 45000, convFactor: 1, batchId: 'batch_b3_sem', costPriceBase: 44000, baseQty: 4 }]);
+  addSale('2026-08-25 13:40:00', [{ product: pSemen, unitId: uZakId, qty: 4, priceAtSale: 45000, convFactor: 1, batchId: 'batch_b3_sem', costPriceBase: 44000, baseQty: 4 }]);
+  addSale('2026-08-26 16:00:00', [{ product: pSemen, unitId: uZakId, qty: 4, priceAtSale: 45000, convFactor: 1, batchId: 'batch_b3_sem', costPriceBase: 44000, baseQty: 4 }]);
+  addSale('2026-08-27 11:20:00', [{ product: pSemen, unitId: uZakId, qty: 4, priceAtSale: 45000, convFactor: 1, batchId: 'batch_b3_sem', costPriceBase: 44000, baseQty: 4 }]);
+  addSale('2026-08-28 14:10:00', [{ product: pSemen, unitId: uZakId, qty: 4, priceAtSale: 45000, convFactor: 1, batchId: 'batch_b3_sem', costPriceBase: 44000, baseQty: 4 }]);
+  addSale('2026-08-29 10:50:00', [{ product: pSemen, unitId: uZakId, qty: 4, priceAtSale: 45000, convFactor: 1, batchId: 'batch_b3_sem', costPriceBase: 44000, baseQty: 4 }]);
 
-  addSale('2026-08-20 13:30:00', [{ product: pBesi, unitId: uBatangId, qty: 5, priceAtSale: 85000, convFactor: 1, batchId: 'batch_b2_bsi', costPriceBase: 75000, baseQty: 5 }]);
-  addSale('2026-08-22 14:00:00', [{ product: pBesi, unitId: uBatangId, qty: 4, priceAtSale: 85000, convFactor: 1, batchId: 'batch_b2_bsi', costPriceBase: 75000, baseQty: 4 }]);
-  addSale('2026-08-24 10:15:00', [{ product: pBesi, unitId: uBatangId, qty: 6, priceAtSale: 85000, convFactor: 1, batchId: 'batch_b2_bsi', costPriceBase: 75000, baseQty: 6 }]);
-  addSale('2026-08-26 15:40:00', [{ product: pBesi, unitId: uBatangId, qty: 5, priceAtSale: 85000, convFactor: 1, batchId: 'batch_b2_bsi', costPriceBase: 75000, baseQty: 5 }]);
-  addSale('2026-08-28 11:10:00', [{ product: pBesi, unitId: uBatangId, qty: 10, priceAtSale: 85000, convFactor: 1, batchId: 'batch_b2_bsi', costPriceBase: 75000, baseQty: 10 }]);
-  addSale('2026-08-29 14:20:00', [{ product: pBesi, unitId: uBatangId, qty: 10, priceAtSale: 85000, convFactor: 1, batchId: 'batch_b2_bsi', costPriceBase: 75000, baseQty: 10 }]);
+  // --- Besi 10MM Uril Sales trajectory (Total 100 BATANG) ---
+  addSale('2026-08-01 14:00:00', [{ product: pBesi, unitId: uBatangId, qty: 5, priceAtSale: 72000, convFactor: 1, batchId: 'batch_b1_bsi', costPriceBase: 52000, baseQty: 5 }]);
+  addSale('2026-08-03 11:30:00', [{ product: pBesi, unitId: uBatangId, qty: 8, priceAtSale: 72000, convFactor: 1, batchId: 'batch_b1_bsi', costPriceBase: 52000, baseQty: 8 }]);
+  addSale('2026-08-05 15:10:00', [{ product: pBesi, unitId: uBatangId, qty: 6, priceAtSale: 72000, convFactor: 1, batchId: 'batch_b1_bsi', costPriceBase: 52000, baseQty: 6 }]);
+  addSale('2026-08-08 10:45:00', [{ product: pBesi, unitId: uBatangId, qty: 7, priceAtSale: 72000, convFactor: 1, batchId: 'batch_b1_bsi', costPriceBase: 52000, baseQty: 7 }]);
+  addSale('2026-08-10 14:20:00', [{ product: pBesi, unitId: uBatangId, qty: 5, priceAtSale: 72000, convFactor: 1, batchId: 'batch_b1_bsi', costPriceBase: 52000, baseQty: 5 }]);
+  addSale('2026-08-12 11:00:00', [{ product: pBesi, unitId: uBatangId, qty: 15, priceAtSale: 72000, convFactor: 1, batchId: 'batch_b1_bsi', costPriceBase: 52000, baseQty: 15 }]);
+  addSale('2026-08-14 13:50:00', [{ product: pBesi, unitId: uBatangId, qty: 6, priceAtSale: 72000, convFactor: 1, batchId: 'batch_b1_bsi', costPriceBase: 52000, baseQty: 6 }]);
+  addSale('2026-08-17 16:00:00', [{ product: pBesi, unitId: uBatangId, qty: 8, priceAtSale: 72000, convFactor: 1, batchId: 'batch_b1_bsi', costPriceBase: 52000, baseQty: 8 }]);
 
-  // --- Pasir Cor Sales trajectory (Total 270 KARUNG / 9 KOL) ---
-  addSale('2026-08-05 14:00:00', [{ product: pPasir, unitId: uKolId, qty: 2, priceAtSale: 900000, convFactor: 30, batchId: 'batch_b1_psr', costPriceBase: 25000, baseQty: 60 }]);
-  addSale('2026-08-08 13:20:00', [{ product: pPasir, unitId: uKolId, qty: 1, priceAtSale: 900000, convFactor: 30, batchId: 'batch_b1_psr', costPriceBase: 25000, baseQty: 30 }]);
-  addSale('2026-08-11 15:10:00', [{ product: pPasir, unitId: uKolId, qty: 1, priceAtSale: 900000, convFactor: 30, batchId: 'batch_b1_psr', costPriceBase: 25000, baseQty: 30 }]);
-  addSale('2026-08-15 11:40:00', [{ product: pPasir, unitId: uKolId, qty: 1, priceAtSale: 900000, convFactor: 30, batchId: 'batch_b1_psr', costPriceBase: 25000, baseQty: 30 }]);
-  addSale('2026-08-19 10:30:00', [{ product: pPasir, unitId: uKolId, qty: 1, priceAtSale: 900000, convFactor: 30, batchId: 'batch_b1_psr', costPriceBase: 25000, baseQty: 30 }]);
-  addSale('2026-08-22 16:00:00', [{ product: pPasir, unitId: uKolId, qty: 1, priceAtSale: 900000, convFactor: 30, batchId: 'batch_b1_psr', costPriceBase: 25000, baseQty: 30 }]);
-  addSale('2026-08-26 14:15:00', [{ product: pPasir, unitId: uKolId, qty: 1, priceAtSale: 900000, convFactor: 30, batchId: 'batch_b1_psr', costPriceBase: 25000, baseQty: 30 }]);
-  addSale('2026-08-29 11:20:00', [{ product: pPasir, unitId: uKolId, qty: 1, priceAtSale: 900000, convFactor: 30, batchId: 'batch_b1_psr', costPriceBase: 25000, baseQty: 30 }]);
+  addSale('2026-08-20 13:30:00', [{ product: pBesi, unitId: uBatangId, qty: 5, priceAtSale: 72000, convFactor: 1, batchId: 'batch_b2_bsi', costPriceBase: 53000, baseQty: 5 }]);
+  addSale('2026-08-22 14:00:00', [{ product: pBesi, unitId: uBatangId, qty: 4, priceAtSale: 72000, convFactor: 1, batchId: 'batch_b2_bsi', costPriceBase: 53000, baseQty: 4 }]);
+  addSale('2026-08-24 10:15:00', [{ product: pBesi, unitId: uBatangId, qty: 6, priceAtSale: 72000, convFactor: 1, batchId: 'batch_b2_bsi', costPriceBase: 53000, baseQty: 6 }]);
+  addSale('2026-08-26 15:40:00', [{ product: pBesi, unitId: uBatangId, qty: 5, priceAtSale: 72000, convFactor: 1, batchId: 'batch_b2_bsi', costPriceBase: 53000, baseQty: 5 }]);
+  addSale('2026-08-28 11:10:00', [{ product: pBesi, unitId: uBatangId, qty: 10, priceAtSale: 72000, convFactor: 1, batchId: 'batch_b2_bsi', costPriceBase: 53000, baseQty: 10 }]);
+  addSale('2026-08-29 14:20:00', [{ product: pBesi, unitId: uBatangId, qty: 10, priceAtSale: 72000, convFactor: 1, batchId: 'batch_b2_bsi', costPriceBase: 53000, baseQty: 10 }]);
 
-  // --- Split Sales trajectory (Total 270 KARUNG / 9 KOL) ---
-  addSale('2026-08-02 13:00:00', [{ product: pSplit, unitId: uKolId, qty: 2, priceAtSale: 900000, convFactor: 30, batchId: 'batch_b1_spl', costPriceBase: 25000, baseQty: 60 }]);
-  addSale('2026-08-06 10:45:00', [{ product: pSplit, unitId: uKolId, qty: 1, priceAtSale: 900000, convFactor: 30, batchId: 'batch_b1_spl', costPriceBase: 25000, baseQty: 30 }]);
-  addSale('2026-08-09 15:30:00', [{ product: pSplit, unitId: uKolId, qty: 1, priceAtSale: 900000, convFactor: 30, batchId: 'batch_b1_spl', costPriceBase: 25000, baseQty: 30 }]);
-  addSale('2026-08-13 11:20:00', [{ product: pSplit, unitId: uKolId, qty: 1, priceAtSale: 900000, convFactor: 30, batchId: 'batch_b1_spl', costPriceBase: 25000, baseQty: 30 }]);
-  addSale('2026-08-17 14:10:00', [{ product: pSplit, unitId: uKolId, qty: 1, priceAtSale: 900000, convFactor: 30, batchId: 'batch_b1_spl', costPriceBase: 25000, baseQty: 30 }]);
-  addSale('2026-08-21 16:30:00', [{ product: pSplit, unitId: uKolId, qty: 1, priceAtSale: 900000, convFactor: 30, batchId: 'batch_b1_spl', costPriceBase: 25000, baseQty: 30 }]);
-  addSale('2026-08-25 10:50:00', [{ product: pSplit, unitId: uKolId, qty: 1, priceAtSale: 900000, convFactor: 30, batchId: 'batch_b1_spl', costPriceBase: 25000, baseQty: 30 }]);
-  addSale('2026-08-28 15:00:00', [{ product: pSplit, unitId: uKolId, qty: 1, priceAtSale: 900000, convFactor: 30, batchId: 'batch_b1_spl', costPriceBase: 25000, baseQty: 30 }]);
+  // --- Pasir Cor Sales trajectory (Total 1.260 KARUNG = 42 KOL @ 30 karung) ---
+  const pasirDays = [
+    '2026-08-03 14:00:00', '2026-08-05 14:00:00', '2026-08-07 13:20:00', '2026-08-09 15:10:00',
+    '2026-08-11 11:40:00', '2026-08-13 10:30:00', '2026-08-15 16:00:00', '2026-08-17 14:15:00',
+    '2026-08-19 11:20:00', '2026-08-21 14:00:00', '2026-08-23 13:40:00', '2026-08-25 15:10:00',
+    '2026-08-27 10:50:00', '2026-08-29 14:30:00',
+  ];
+  pasirDays.forEach((d) => {
+    addSale(d, [{ product: pPasir, unitId: uKolId, qty: 3, priceAtSale: 450000, convFactor: 30, batchId: 'batch_b1_psr', costPriceBase: 7222.22, baseQty: 90 }]);
+  });
 
-  // --- Bata Ringan / Hebel 10 Sales trajectory (Total 830 PCS) ---
+  // --- Split Sales trajectory (Total 630 KARUNG = 21 KOL @ 30 karung) ---
+  const splitDays = [
+    '2026-08-02 13:00:00', '2026-08-06 10:45:00', '2026-08-10 15:30:00',
+    '2026-08-14 11:20:00', '2026-08-18 14:10:00', '2026-08-22 16:30:00',
+    '2026-08-27 15:00:00',
+  ];
+  splitDays.forEach((d) => {
+    addSale(d, [{ product: pSplit, unitId: uKolId, qty: 3, priceAtSale: 550000, convFactor: 30, batchId: 'batch_b1_spl', costPriceBase: 10555.56, baseQty: 90 }]);
+  });
+
+  // --- Bata Ringan / Hebel 10 Sales trajectory (Total 2.125 PCS = 25 KUBIK @ 85 pcs) ---
   const hebelDays = [
-    { date: '2026-08-01 14:30:00', qty: 50 },
-    { date: '2026-08-03 10:15:00', qty: 40 },
-    { date: '2026-08-05 16:00:00', qty: 60 },
-    { date: '2026-08-07 11:30:00', qty: 50 },
-    { date: '2026-08-10 13:00:00', qty: 100 },
-    { date: '2026-08-12 15:20:00', qty: 60 },
-    { date: '2026-08-14 09:40:00', qty: 50 },
-    { date: '2026-08-16 14:15:00', qty: 60 },
-    { date: '2026-08-18 11:00:00', qty: 50 },
-    { date: '2026-08-21 15:40:00', qty: 70 },
-    { date: '2026-08-23 10:20:00', qty: 60 },
-    { date: '2026-08-25 16:10:00', qty: 50 },
-    { date: '2026-08-27 13:30:00', qty: 70 },
-    { date: '2026-08-29 11:00:00', qty: 60 },
+    { date: '2026-08-01 14:30:00', qty: 140 },
+    { date: '2026-08-03 10:15:00', qty: 135 },
+    { date: '2026-08-05 16:00:00', qty: 150 },
+    { date: '2026-08-07 11:30:00', qty: 140 },
+    { date: '2026-08-09 13:00:00', qty: 140 },
+    { date: '2026-08-11 15:20:00', qty: 150 },
+    { date: '2026-08-13 09:40:00', qty: 140 },
+    { date: '2026-08-15 14:15:00', qty: 150 },
+    { date: '2026-08-17 11:00:00', qty: 130 },
+    { date: '2026-08-19 15:40:00', qty: 140 },
+    { date: '2026-08-21 10:20:00', qty: 150 },
+    { date: '2026-08-23 16:10:00', qty: 140 },
+    { date: '2026-08-25 13:30:00', qty: 130 },
+    { date: '2026-08-27 11:00:00', qty: 140 },
+    { date: '2026-08-29 15:30:00', qty: 150 },
   ];
-
   hebelDays.forEach((h) => {
-    addSale(h.date, [{ product: pHebel, unitId: uPcsId, qty: h.qty, priceAtSale: 8500, convFactor: 1, batchId: 'batch_b1_hbl', costPriceBase: 7228, baseQty: h.qty }]);
+    addSale(h.date, [{ product: pHebel, unitId: uPcsId, qty: h.qty, priceAtSale: 8000, convFactor: 1, batchId: 'batch_b1_hbl', costPriceBase: 6000, baseQty: h.qty }]);
   });
 
-  // --- Cat Aries 725 Sales trajectory (Total 76 GALON) ---
+  // --- Cat Aries 725 Sales trajectory (Total 30 GALON) ---
   const catDays = [
-    { date: '2026-08-02 11:15:00', qty: 6 },
     { date: '2026-08-04 14:30:00', qty: 5 },
-    { date: '2026-08-07 10:40:00', qty: 7 },
-    { date: '2026-08-09 15:20:00', qty: 6 },
-    { date: '2026-08-12 11:00:00', qty: 10 },
-    { date: '2026-08-15 13:45:00', qty: 8 },
-    { date: '2026-08-18 16:10:00', qty: 6 },
-    { date: '2026-08-20 10:30:00', qty: 7 },
-    { date: '2026-08-23 14:50:00', qty: 7 },
-    { date: '2026-08-26 11:15:00', qty: 7 },
-    { date: '2026-08-29 15:30:00', qty: 7 },
+    { date: '2026-08-09 15:20:00', qty: 5 },
+    { date: '2026-08-14 11:00:00', qty: 5 },
+    { date: '2026-08-19 16:10:00', qty: 5 },
+    { date: '2026-08-24 10:30:00', qty: 5 },
+    { date: '2026-08-29 15:30:00', qty: 5 },
   ];
-
   catDays.forEach((c) => {
-    addSale(c.date, [{ product: pCat, unitId: uGalonId, qty: c.qty, priceAtSale: 88000, convFactor: 1, batchId: 'batch_b1_cat', costPriceBase: 75000, baseQty: c.qty }]);
+    addSale(c.date, [{ product: pCat, unitId: uGalonId, qty: c.qty, priceAtSale: 90000, convFactor: 1, batchId: 'batch_b1_cat', costPriceBase: 83000, baseQty: c.qty }]);
   });
 
-  // --- Paku 5 Sales trajectory (Total 1300 quarter-kg = 325 KG) ---
-  for (let i = 1; i <= 13; i++) {
-    const day = String(i * 2).padStart(2, '0');
-    const dateStr = `2026-08-${day} 16:45:00`;
-    addSale(dateStr, [{ product: pPaku, unitId: uKgId, qty: 25, priceAtSale: 20000, convFactor: 4, batchId: 'batch_b1_pku', costPriceBase: 4000, baseQty: 100 }]);
-  }
+  // --- Paku 5 Sales trajectory (Total 800 quarter-kg = 200 KG = 8 BOX) ---
+  const pakuDays = [
+    '2026-08-03 16:45:00', '2026-08-07 16:45:00', '2026-08-11 16:45:00', '2026-08-15 16:45:00',
+    '2026-08-19 16:45:00', '2026-08-23 16:45:00', '2026-08-26 16:45:00', '2026-08-29 16:45:00',
+  ];
+  pakuDays.forEach((d) => {
+    addSale(d, [{ product: pPaku, unitId: uKgId, qty: 25, priceAtSale: 18000, convFactor: 4, batchId: 'batch_b1_pku', costPriceBase: 3600, baseQty: 100 }]);
+  });
 
   // Build SQL Output
   const sqlLines: string[] = [];
@@ -671,12 +684,12 @@ ALTER TABLE public."PurchaseItem" OWNER TO user_pos;\n`);
     "initialQuantity" double precision NOT NULL,
     "currentQuantity" double precision NOT NULL,
     "costPrice" numeric(65,30) NOT NULL,
+    "sellingPrice" numeric(65,30) DEFAULT 0 NOT NULL,
     "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     "updatedAt" timestamp(3) without time zone NOT NULL,
-    "sellingPrice" numeric(65,30) DEFAULT 0 NOT NULL,
-    "isArchived" boolean DEFAULT false NOT NULL,
     "unitId" text,
     "conversionFactor" double precision DEFAULT 1 NOT NULL,
+    "isArchived" boolean DEFAULT false NOT NULL,
     CONSTRAINT "StockBatch_pkey" PRIMARY KEY (id)
 );
 ALTER TABLE public."StockBatch" OWNER TO user_pos;
@@ -745,29 +758,6 @@ ALTER TABLE public."SaleItemBatch" OWNER TO user_pos;\n`);
 );
 ALTER TABLE public."StockLog" OWNER TO user_pos;\n`);
 
-  sqlLines.push(`CREATE TABLE public."Cart" (
-    id text NOT NULL,
-    "sessionId" text NOT NULL,
-    "updatedAt" timestamp(3) without time zone NOT NULL,
-    CONSTRAINT "Cart_pkey" PRIMARY KEY (id)
-);
-ALTER TABLE public."Cart" OWNER TO user_pos;\n`);
-
-  sqlLines.push(`CREATE TABLE public."CartItem" (
-    id text NOT NULL,
-    "cartId" text NOT NULL,
-    "productId" text NOT NULL,
-    "unitId" text,
-    "batchId" text,
-    price numeric(65,30),
-    quantity double precision NOT NULL,
-    "takenQuantity" double precision,
-    "isBonus" boolean DEFAULT false NOT NULL,
-    discount numeric(65,30) DEFAULT 0,
-    CONSTRAINT "CartItem_pkey" PRIMARY KEY (id)
-);
-ALTER TABLE public."CartItem" OWNER TO user_pos;\n`);
-
   sqlLines.push(`CREATE TABLE public."AuditLogs" (
     id text NOT NULL,
     "userId" text NOT NULL,
@@ -781,17 +771,7 @@ ALTER TABLE public."CartItem" OWNER TO user_pos;\n`);
 );
 ALTER TABLE public."AuditLogs" OWNER TO user_pos;\n`);
 
-  sqlLines.push(`CREATE TABLE public."ProductImage" (
-    id text NOT NULL,
-    "productId" text NOT NULL,
-    data bytea NOT NULL,
-    "mimeType" text NOT NULL,
-    CONSTRAINT "ProductImage_pkey" PRIMARY KEY (id)
-);
-ALTER TABLE public."ProductImage" OWNER TO user_pos;\n`);
-
-  // Foreign Keys
-  sqlLines.push(`-- Foreign Keys --`);
+  // Foreign keys
   sqlLines.push(`ALTER TABLE ONLY public."Product" ADD CONSTRAINT "Product_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES public."Category"(id) ON UPDATE CASCADE ON DELETE RESTRICT;`);
   sqlLines.push(`ALTER TABLE ONLY public."Product" ADD CONSTRAINT "Product_supplierId_fkey" FOREIGN KEY ("supplierId") REFERENCES public."Supplier"(id) ON UPDATE CASCADE ON DELETE SET NULL;`);
   sqlLines.push(`ALTER TABLE ONLY public."ProductPrice" ADD CONSTRAINT "ProductPrice_productId_fkey" FOREIGN KEY ("productId") REFERENCES public."Product"(id) ON UPDATE CASCADE ON DELETE CASCADE;`);
@@ -885,9 +865,6 @@ ALTER TABLE public."ProductImage" OWNER TO user_pos;\n`);
   });
   sqlLines.push('');
 
-  // IMPORTANT FIX: StockBatch stores costPrice AND sellingPrice PER BASE UNIT!
-  // initialQuantity and currentQuantity are in BASE UNITS!
-  // unitId is set to baseUnitId, conversionFactor = 1.
   sqlLines.push(`INSERT INTO public."StockBatch" (id, "productId", "purchaseItemId", "initialQuantity", "currentQuantity", "costPrice", "sellingPrice", "createdAt", "updatedAt", "unitId", "conversionFactor") VALUES`);
   purchasesData.forEach((p, idx) => {
     const isLast = idx === purchasesData.length - 1;
@@ -996,12 +973,225 @@ ALTER TABLE public."ProductImage" OWNER TO user_pos;\n`);
   sqlLines.push(`-- Selesai restore data simulasi.\n`);
 
   const sqlContent = sqlLines.join('\n');
-  const outputPath = path.resolve(process.cwd(), 'simulasi_pengujian.sql');
-  fs.writeFileSync(outputPath, sqlContent, 'utf-8');
+  const outputFiles = [
+    path.resolve(process.cwd(), 'simulasi_pengujian.sql'),
+    path.resolve(process.cwd(), 'prisma', 'simulasi_pengujian.sql'),
+    path.resolve(process.cwd(), 'docs', 'simulasi_pengujian.sql'),
+  ];
 
-  console.log(`Successfully written SQL script to: ${outputPath}`);
-  console.log(`File size: ${(fs.statSync(outputPath).size / 1024).toFixed(2)} KB`);
+  for (const f of outputFiles) {
+    fs.writeFileSync(f, sqlContent, 'utf-8');
+    console.log(`Successfully written SQL script to: ${f} (${(fs.statSync(f).size / 1024).toFixed(2)} KB)`);
+  }
+
   console.log(`Total Sales Invoices generated: ${salesList.length}`);
+
+  // Seeding directly to PostgreSQL database via Prisma
+  console.log('\n--- SEEDING DIRECTLY TO ACTIVE DATABASE VIA PRISMA ---');
+  const prisma = new PrismaClient();
+  try {
+    await prisma.$transaction(async (tx) => {
+      console.log('1. Clearing existing transactions and products...');
+      await tx.saleItemBatch.deleteMany();
+      await tx.saleItem.deleteMany();
+      await tx.sale.deleteMany();
+      await tx.stockLog.deleteMany();
+      await tx.stockBatchPrice.deleteMany();
+      await tx.stockBatch.deleteMany();
+      await tx.purchaseItem.deleteMany();
+      await tx.purchase.deleteMany();
+      await tx.cartItem.deleteMany();
+      await tx.cart.deleteMany();
+      await tx.productPrice.deleteMany();
+      await tx.productImage.deleteMany();
+      await tx.product.deleteMany();
+
+      console.log('2. Inserting products...');
+      for (const p of products) {
+        await tx.product.create({
+          data: {
+            id: p.id,
+            code: p.code,
+            name: p.name,
+            description: p.description,
+            categoryId: p.categoryId,
+            stock: p.stock,
+            minStock: p.minStock,
+            averageCost: p.averageCost,
+            supplierId: p.supplierId,
+            abcCategory: p.abcCategory,
+            leadTime: p.leadTime,
+            maxStock: p.maxStock,
+            suggestedMin: p.suggestedMin,
+            suggestedMax: p.suggestedMax,
+            warehouseCapacity: p.warehouseCapacity,
+            safetyStockDays: p.safetyStockDays,
+          },
+        });
+      }
+
+      console.log('3. Inserting product prices...');
+      for (const pp of prices) {
+        await tx.productPrice.create({
+          data: {
+            id: pp.id,
+            productId: pp.productId,
+            unitId: pp.unitId,
+            price: pp.price,
+            conversionFactor: pp.convFactor,
+          },
+        });
+      }
+
+      console.log('4. Inserting purchases & batches...');
+      for (const p of purchasesData) {
+        const totalAmount = p.qty * p.costPrice;
+        await tx.purchase.create({
+          data: {
+            id: p.id,
+            invoiceNumber: p.inv,
+            supplierId: supplierId,
+            totalAmount: totalAmount,
+            paymentStatus: 'PAID',
+            paymentMethod: 'TRANSFER',
+            createdAt: new Date(p.date),
+            updatedAt: new Date(p.date),
+          },
+        });
+
+        const piId = `pi_${p.id}`;
+        await tx.purchaseItem.create({
+          data: {
+            id: piId,
+            purchaseId: p.id,
+            productId: p.product.id,
+            unitId: p.unitId,
+            quantity: p.qty,
+            costPrice: p.costPrice,
+          },
+        });
+
+        const initialQtyBase = p.baseQty || (p.qty * p.convFactor);
+        const currQtyBase = batchRemainingQty[p.batchId] ?? 0;
+        const costPriceBase = p.costPriceBase || p.costPrice;
+        const sellingPriceBase = p.sellingPriceBase || p.sellingPrice;
+
+        await tx.stockBatch.create({
+          data: {
+            id: p.batchId,
+            productId: p.product.id,
+            purchaseItemId: piId,
+            initialQuantity: initialQtyBase,
+            currentQuantity: currQtyBase,
+            costPrice: costPriceBase,
+            sellingPrice: sellingPriceBase,
+            unitId: p.product.baseUnitId,
+            conversionFactor: 1,
+            createdAt: new Date(p.date),
+            updatedAt: new Date(p.date),
+          },
+        });
+
+        // Stock log for purchase
+        const unitName = unitNameMap[p.unitId] || p.unitId;
+        await tx.stockLog.create({
+          data: {
+            id: makeId('log'),
+            productId: p.product.id,
+            type: 'IN',
+            quantity: initialQtyBase,
+            unitName: unitName,
+            unitQuantity: p.qty,
+            reason: `Pembelian ${p.batchCode} (${p.inv})`,
+            createdAt: new Date(p.date),
+          },
+        });
+      }
+
+      console.log('5. Inserting batch prices...');
+      for (const bp of batchPrices) {
+        await tx.stockBatchPrice.create({
+          data: {
+            id: bp.id,
+            batchId: bp.batchId,
+            unitId: bp.unitId,
+            price: bp.price,
+          },
+        });
+      }
+
+      console.log('6. Inserting 30-day sales trajectory...');
+      for (const s of salesList) {
+        let totalSaleAmount = 0;
+        s.items.forEach((item) => {
+          totalSaleAmount += item.qty * item.priceAtSale;
+        });
+
+        const saleId = makeId('sale');
+        await tx.sale.create({
+          data: {
+            id: saleId,
+            invoiceNumber: s.invNumber,
+            totalAmount: totalSaleAmount,
+            paymentStatus: 'PAID',
+            paymentMethod: 'CASH',
+            amountPaid: totalSaleAmount,
+            changeAmount: 0,
+            userId: userIdKasir,
+            createdAt: new Date(s.date),
+          },
+        });
+
+        for (const item of s.items) {
+          const saleItemId = makeId('sitem');
+          await tx.saleItem.create({
+            data: {
+              id: saleItemId,
+              saleId: saleId,
+              productId: item.product.id,
+              unitId: item.unitId,
+              quantity: item.qty,
+              priceAtSale: item.priceAtSale,
+              isManualPrice: false,
+              isBonus: false,
+              conversionFactor: item.convFactor,
+            },
+          });
+
+          await tx.saleItemBatch.create({
+            data: {
+              id: makeId('sibatch'),
+              saleItemId: saleItemId,
+              batchId: item.batchId,
+              quantity: item.baseQty,
+              costPrice: item.costPriceBase,
+            },
+          });
+
+          const unitName = unitNameMap[item.unitId] || item.unitId;
+          await tx.stockLog.create({
+            data: {
+              id: makeId('log'),
+              productId: item.product.id,
+              type: 'OUT',
+              quantity: item.baseQty,
+              unitName: unitName,
+              unitQuantity: item.qty,
+              reason: `Penjualan Nota ${s.invNumber}`,
+              createdAt: new Date(s.date),
+            },
+          });
+        }
+      }
+    });
+
+    console.log('✅ DATABASE SEEDING COMPLETED SUCCESSFULLY!');
+  } catch (err) {
+    console.error('Database seeding error:', err);
+    throw err;
+  } finally {
+    await prisma.$disconnect();
+  }
 }
 
 generate().catch((err) => {
